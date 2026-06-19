@@ -47,9 +47,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/default.yaml")
     ap.add_argument("--subset", default="starting_subset")
-    ap.add_argument("--out", default="results/mpop")
+    ap.add_argument("--out", default="results/mpop",
+                    help="output dir -- point at Google Drive so it survives a Colab disconnect")
+    ap.add_argument("--max-seq-len", type=int, default=None,
+                    help="override model.max_seq_len (e.g. 2048 to roughly halve training time)")
     args = ap.parse_args()
     cfg = load_config(args.config)
+    if args.max_seq_len:
+        cfg["model"]["max_seq_len"] = args.max_seq_len
     taxonomy = load_tasks()
 
     if args.subset == "all":
