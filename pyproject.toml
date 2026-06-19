@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sro-minitaur-transfer"
+version = "0.1.0"
+description = "Cross-task individual transfer in SRO with a behavioral foundation model (Minitaur/Centaur)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24", "pandas>=2.0", "scipy>=1.10",
+    "scikit-learn>=1.3", "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+model = ["torch>=2.2", "transformers>=4.44", "peft>=0.12",
+         "accelerate>=0.33", "datasets>=2.20", "bitsandbytes>=0.43"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

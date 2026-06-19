@@ -1,0 +1,9 @@
+# GPU stack for Phase 1-4 (Colab). Install on top of requirements.txt.
+# Pin transformers/peft to versions compatible with your Minitaur checkpoint.
+torch>=2.2
+transformers>=4.44
+peft>=0.12
+accelerate>=0.33
+datasets>=2.20
+bitsandbytes>=0.43      # 4-bit (QLoRA) loading on a single Colab GPU
+sentencepiece>=0.2

@@ -1,0 +1,89 @@
+# SRO task taxonomy for the cross-task individual-transfer study.
+#
+# `domain` is our grouping; `ceiling` flags tasks whose *choice* accuracy is at
+# ceiling (individual differences live in RT, which a choice-only model cannot
+# see -- empirically measured, see results/reliability). `in_distribution` flags
+# paradigms that resemble Psych-101 / Centaur training data. `caveat` documents
+# encoding limitations. All 33 tasks have NL encodings under output_nl/.
+
+tasks:
+  # ---- conflict / cognitive control -------------------------------------
+  stroop:                         {domain: conflict_control, ceiling: true,  in_distribution: false}
+  simon:                          {domain: conflict_control, ceiling: true,  in_distribution: false}
+  attention_network_task:         {domain: conflict_control, ceiling: true,  in_distribution: false}
+  directed_forgetting:            {domain: conflict_control, ceiling: false, in_distribution: false}
+  recent_probes:                  {domain: conflict_control, ceiling: false, in_distribution: false}
+  local_global_letter:            {domain: conflict_control, ceiling: false, in_distribution: false}
+  dot_pattern_expectancy:         {domain: conflict_control, ceiling: false, in_distribution: false}  # AY/BX carry 2D control style
+
+  # ---- response inhibition ----------------------------------------------
+  stop_signal:                    {domain: inhibition, ceiling: false, in_distribution: false}  # SSRT lives in RT/SSD
+  motor_selective_stop_signal:    {domain: inhibition, ceiling: false, in_distribution: false}
+  stim_selective_stop_signal:     {domain: inhibition, ceiling: false, in_distribution: false}
+  go_nogo:                        {domain: inhibition, ceiling: false, in_distribution: false}
+
+  # ---- task switching ----------------------------------------------------
+  threebytwo:                     {domain: switching, ceiling: true,  in_distribution: false}
+  shift_task:                     {domain: switching, ceiling: false, in_distribution: true}   # feedback-driven set shifting
+
+  # ---- working memory ----------------------------------------------------
+  adaptive_n_back:                {domain: working_memory, ceiling: false, in_distribution: false}
+  digit_span:                     {domain: working_memory, ceiling: false, in_distribution: false}
+  spatial_span:                   {domain: working_memory, ceiling: false, in_distribution: false}
+  keep_track:                     {domain: working_memory, ceiling: false, in_distribution: false, caveat: no_stimulus_stream}
+
+  # ---- reasoning ---------------------------------------------------------
+  ravens:                         {domain: reasoning, ceiling: false, in_distribution: false, caveat: opaque_item_ids}
+  hierarchical_rule:              {domain: reasoning, ceiling: false, in_distribution: true}
+
+  # ---- speed -------------------------------------------------------------
+  choice_reaction_time:           {domain: speed, ceiling: true, in_distribution: false}  # signal is pure RT
+  psychological_refractory_period_two_choices: {domain: speed, ceiling: true, in_distribution: false}
+
+  # ---- reinforcement learning -------------------------------------------
+  probabilistic_selection:        {domain: reinforcement_learning, ceiling: false, in_distribution: true}
+  two_stage_decision:             {domain: reinforcement_learning, ceiling: false, in_distribution: true}  # MB/MF weight
+
+  # ---- delay discounting (preference, no objective correct) -------------
+  kirby:                          {domain: discounting, ceiling: false, in_distribution: true}
+  bickel_titrator:                {domain: discounting, ceiling: false, in_distribution: true}
+  discount_titrate:               {domain: discounting, ceiling: false, in_distribution: true}
+
+  # ---- risk / decision ---------------------------------------------------
+  columbia_card_task_cold:        {domain: risk, ceiling: false, in_distribution: true}
+  columbia_card_task_hot:         {domain: risk, ceiling: false, in_distribution: true}
+  angling_risk_task_always_sunny: {domain: risk, ceiling: false, in_distribution: true, caveat: very_long_sequences}
+  information_sampling_task:      {domain: risk, ceiling: false, in_distribution: true}
+
+  # ---- value-based self control -----------------------------------------
+  dietary_decision:               {domain: self_control, ceiling: false, in_distribution: true}
+
+  # ---- planning ----------------------------------------------------------
+  tower_of_london:                {domain: planning, ceiling: false, in_distribution: false}
+
+# Named subsets used across the pipeline -----------------------------------
+subsets:
+  # Tasks excluded from CHOICE-ONLY transfer: accuracy at ceiling, so the
+  # individual-difference signal is in RT, which the model cannot observe.
+  exclude_choice_only:
+    [stroop, simon, attention_network_task, threebytwo,
+     choice_reaction_time, psychological_refractory_period_two_choices]
+
+  # Control tasks with real choice-level error variance (no ceiling).
+  no_ceiling_control:
+    [directed_forgetting, recent_probes, local_global_letter, dot_pattern_expectancy]
+
+  # Paradigms close to Psych-101 / Centaur training (lower OOD risk).
+  in_distribution:
+    [kirby, bickel_titrator, discount_titrate,
+     probabilistic_selection, two_stage_decision,
+     columbia_card_task_cold, columbia_card_task_hot, information_sampling_task,
+     dietary_decision, shift_task, hierarchical_rule]
+
+  # Recommended Phase-0c / Phase-2 STARTING subset: in-distribution + high
+  # choice-signal. Strong priors that transfer should appear here if anywhere.
+  starting_subset:
+    [kirby, bickel_titrator, discount_titrate,
+     two_stage_decision, probabilistic_selection,
+     columbia_card_task_cold, columbia_card_task_hot, information_sampling_task,
+     directed_forgetting, recent_probes, dot_pattern_expectancy]

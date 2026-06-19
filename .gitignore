@@ -1,0 +1,23 @@
+# data lives on Drive, never in the repo (NL is ~150MB; ART alone is 74MB)
+# NOTE: anchor to repo root so src/sro_transfer/data/ (source) is NOT ignored
+output_nl/
+*.jsonl
+/sro_dv/
+/data/
+
+# results / checkpoints
+results/*
+!results/.gitkeep
+*.bin
+*.safetensors
+*.pt
+mpop/
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.venv/
+env/
+.DS_Store
