@@ -102,8 +102,11 @@ from google.colab import drive; drive.mount('/content/drive')
 !python scripts/run_identification.py --mpop results/mpop --target two_stage_decision
 ```
 
-Set your Minitaur checkpoint in `configs/default.yaml:model.base_model` (the
-default points at the public Centaur-8B adapter as a reference).
+The base model is **Centaur 8B** (`marcelbinz/Llama-3.1-Centaur-8B`, the plan's
+"Minitaur"), loaded merged by default. It is gated: log in to HF and accept the
+Llama license first (the notebook has a login cell). To use a LoRA-adapter
+checkpoint instead, set `model.base_is_adapter: true` and point `base_model` at
+the adapter.
 
 ## Baseline ladder (for reviewers)
 

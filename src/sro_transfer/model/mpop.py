@@ -19,11 +19,12 @@ from .masking import build_labels
 
 
 def load_base_model(cfg: dict):
-    """Load the behavioral FM (Minitaur/Centaur) + tokenizer, 4-bit for Colab.
+    """Load the behavioral FM (Centaur 8B) + tokenizer, 4-bit for Colab.
 
-    The base is ``base_llm`` with the ``base_model`` LoRA adapter applied and
-    merged; a *fresh* LoRA is then attached for the SRO population fine-tune so
-    the original Psych-101 adapter is preserved as the starting point.
+    Default: ``base_model`` is the merged Centaur model, loaded directly. If
+    ``base_is_adapter`` is true, ``base_model`` is instead a LoRA adapter applied
+    on ``base_llm`` and merged. Either way a *fresh* LoRA is then attached for
+    the SRO population fine-tune.
     """
     import torch
     from peft import LoraConfig, PeftModel, get_peft_model
@@ -34,7 +35,8 @@ def load_base_model(cfg: dict):
     )
 
     m = cfg["model"]
-    tok = AutoTokenizer.from_pretrained(m["base_llm"])
+    src = m["base_llm"] if m.get("base_is_adapter") else m["base_model"]
+    tok = AutoTokenizer.from_pretrained(src)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
 
@@ -47,11 +49,13 @@ def load_base_model(cfg: dict):
             bnb_4bit_use_double_quant=True,
         )
     model = AutoModelForCausalLM.from_pretrained(
-        m["base_llm"], quantization_config=quant, torch_dtype=torch.bfloat16,
+        src, quantization_config=quant, torch_dtype=torch.bfloat16,
         device_map="auto",
     )
-    # apply the existing behavioral-FM adapter (Minitaur / Centaur), then merge
-    if m.get("base_model"):
+    # Only when base_model is a LoRA adapter: apply it on the raw Llama base and
+    # merge. Default path loads the merged Centaur directly above, so this is a
+    # no-op.
+    if m.get("base_is_adapter") and m.get("base_model"):
         model = PeftModel.from_pretrained(model, m["base_model"])
         model = model.merge_and_unload()
 

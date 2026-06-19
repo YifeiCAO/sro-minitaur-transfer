@@ -22,11 +22,13 @@ split:
   unseen_subject: null
 
 model:
-  # Base behavioral foundation model. The plan calls it "Minitaur 8B"
-  # (Llama-3.1-8B + Psych-101 LoRA). Set this to your Minitaur checkpoint.
-  # The Centaur-8B adapter is the documented public reference point.
-  base_model: marcelbinz/Llama-3.1-Centaur-8B-adapter
-  base_llm: meta-llama/Llama-3.1-8B          # adapter is applied on top of this
+  # Behavioral foundation model = Centaur 8B (the plan's "Minitaur").
+  # Default: load the MERGED Centaur model directly -- one download, and no need
+  # to also pull the raw Llama base. Requires an HF login; you may still have to
+  # accept the Llama license on the repo page (gated).
+  base_model: marcelbinz/Llama-3.1-Centaur-8B
+  base_is_adapter: false                      # true => base_model is a LoRA adapter on base_llm
+  base_llm: meta-llama/Llama-3.1-8B           # only used when base_is_adapter: true
   load_in_4bit: true                          # QLoRA-style for a single Colab GPU
   max_seq_len: 4096                           # ART sessions exceed this -> truncate
 
