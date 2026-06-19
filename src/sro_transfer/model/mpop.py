@@ -27,7 +27,12 @@ def load_base_model(cfg: dict):
     the SRO population fine-tune.
     """
     import torch
-    from peft import LoraConfig, PeftModel, get_peft_model
+    from peft import (
+        LoraConfig,
+        PeftModel,
+        get_peft_model,
+        prepare_model_for_kbit_training,
+    )
     from transformers import (
         AutoModelForCausalLM,
         AutoTokenizer,
@@ -58,6 +63,13 @@ def load_base_model(cfg: dict):
     if m.get("base_is_adapter") and m.get("base_model"):
         model = PeftModel.from_pretrained(model, m["base_model"])
         model = model.merge_and_unload()
+
+    # standard QLoRA prep for 4-bit training (upcasts norms, enables grad flow
+    # through the frozen base, turns on gradient checkpointing for memory)
+    if m.get("load_in_4bit"):
+        model = prepare_model_for_kbit_training(
+            model, use_gradient_checkpointing=True
+        )
 
     # fresh LoRA for the SRO population fine-tune
     ft = cfg["mpop_finetune"]
@@ -102,6 +114,8 @@ def train_mpop(cfg: dict, sessions: dict[str, str], out_dir: str | Path):
         learning_rate=ft["lr"],
         num_train_epochs=ft["epochs"],
         bf16=True,
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
         logging_steps=10,
         save_strategy="epoch",
         report_to=[],

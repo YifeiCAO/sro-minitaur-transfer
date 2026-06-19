@@ -7,8 +7,12 @@ individual information, then save the frozen floor model.
 Requires a GPU (Colab). Loss is masked to <<...>> response tokens.
 """
 import argparse
+import os
 import sys
 from pathlib import Path
+
+# reduce CUDA fragmentation before torch is imported (helps avoid OOM on 24GB)
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
