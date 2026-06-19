@@ -102,11 +102,11 @@ from google.colab import drive; drive.mount('/content/drive')
 !python scripts/run_identification.py --mpop results/mpop --target two_stage_decision
 ```
 
-The base model is **Centaur 8B** (`marcelbinz/Llama-3.1-Centaur-8B`, the plan's
-"Minitaur"), loaded merged by default. It is gated: log in to HF and accept the
-Llama license first (the notebook has a login cell). To use a LoRA-adapter
-checkpoint instead, set `model.base_is_adapter: true` and point `base_model` at
-the adapter.
+The base model is **Minitaur 8B** (`marcelbinz/Llama-3.1-Minitaur-8B` — Marcel
+Binz's small Centaur, Psych-101-trained), a merged Safetensors model loaded
+directly, so the gated raw Llama base is not pulled — just log in to HF (the
+notebook has a login cell). To use a LoRA-adapter checkpoint instead, set
+`model.base_is_adapter: true` and point `base_model` at the adapter.
 
 ## Baseline ladder (for reviewers)
 
