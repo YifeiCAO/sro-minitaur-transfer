@@ -12,7 +12,7 @@ paths:
   #   Data/Retest_02-16-2019/meaningful_variables.csv    -> sro_dv/retest.csv
   dv_complete: ${paths.data_root}/sro_dv/complete.csv
   dv_retest: ${paths.data_root}/sro_dv/retest.csv
-  results: ./results
+  results: /content/drive/MyDrive/sro_minitaur/results   # on Drive: survives Colab disconnect, caches resume
 
 split:
   seed: 0
