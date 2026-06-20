@@ -72,19 +72,26 @@ def main():
     rng = random.Random(cfg["split"]["seed"])
     for ep in range(epochs):
         rng.shuffle(train_ids)
-        opt.zero_grad(); running = 0.0
+        opt.zero_grad(); running = 0.0; seen = 0; skipped = 0
         for i, w in enumerate(train_ids, 1):
             z = tm.encode_person(reps[w].unsqueeze(0).float().to(model.device))
             ids, att, lab = _ids(tgt[w])
             loss = tm.target_nll(ids, att, lab, z) / args.grad_accum
+            if not torch.isfinite(loss):           # skip a bad micro-batch
+                skipped += 1
+                continue
             loss.backward()
-            running += loss.detach().item() * args.grad_accum
+            running += loss.detach().item() * args.grad_accum; seen += 1
             if i % args.grad_accum == 0:
-                torch.nn.utils.clip_grad_norm_(params, 1.0)
-                opt.step(); opt.zero_grad()
+                gnorm = torch.nn.utils.clip_grad_norm_(params, 1.0)
+                if torch.isfinite(gnorm):          # skip non-finite gradient steps
+                    opt.step()
+                else:
+                    skipped += 1
+                opt.zero_grad()
             if i % 50 == 0:
-                print(f"  epoch {ep} {i}/{len(train_ids)} loss={running/i:.4f}")
-        print(f"epoch {ep} mean loss = {running/max(len(train_ids),1):.4f}")
+                print(f"  epoch {ep} {i}/{len(train_ids)} loss={running/max(seen,1):.4f} skipped={skipped}")
+        print(f"epoch {ep} mean loss = {running/max(seen,1):.4f} (skipped {skipped})")
 
     heads_fp = Path(args.base) / "transfer" / f"{args.source}_{args.target}" / "heads.pt"
     save_heads(tm, heads_fp)
