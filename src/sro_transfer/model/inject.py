@@ -37,7 +37,8 @@ def build_soft_prompt_injector(z_dim: int, hidden_size: int, n_soft_tokens: int 
             """
             import torch
 
-            pre = self.prefix_embeds(z)                      # [B, n, H]
+            # cast the (fp32) prefix to the LM's embedding dtype (bf16/fp16)
+            pre = self.prefix_embeds(z).to(token_embeds.dtype)   # [B, n, H]
             inputs_embeds = torch.cat([pre, token_embeds], dim=1)
             if attention_mask is not None:
                 pad = torch.ones(
