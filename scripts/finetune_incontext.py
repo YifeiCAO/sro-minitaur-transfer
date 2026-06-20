@@ -49,7 +49,8 @@ def main():
     ap.add_argument("--max-examples", type=int, default=4000)
     ap.add_argument("--epochs", type=int, default=1)
     ap.add_argument("--lr", type=float, default=1e-4)
-    ap.add_argument("--grad-accum", type=int, default=8)
+    ap.add_argument("--batch-size", type=int, default=1, help="per-device batch; raise on A100 (4) to use the GPU")
+    ap.add_argument("--grad-accum", type=int, default=8, help="lower it when raising batch to keep effective batch ~constant")
     args = ap.parse_args()
     import torch
     from datasets import Dataset
@@ -86,7 +87,7 @@ def main():
 
     bf16_ok = torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8
     targs = TrainingArguments(
-        output_dir=args.out, per_device_train_batch_size=1,
+        output_dir=args.out, per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=args.grad_accum, learning_rate=args.lr,
         num_train_epochs=args.epochs, bf16=bf16_ok, fp16=not bf16_ok,
         gradient_checkpointing=True, gradient_checkpointing_kwargs={"use_reentrant": False},
