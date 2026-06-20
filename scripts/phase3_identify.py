@@ -50,7 +50,10 @@ def main():
     out = heads_fp.parent / "identification.json"
     out.write_text(json.dumps(rep, indent=2))
     print(json.dumps(rep, indent=2))
-    print(f"\ntop1 >> {1/K:.2f} (chance) => cross-task transfer.\nsaved -> {out}")
+    se = (rep["chance_top1"] * (1 - rep["chance_top1"]) / max(rep["n"], 1)) ** 0.5
+    verdict = "ABOVE chance" if (rep["top1_acc"] - rep["chance_top1"]) > 2 * se else "~chance (no signal)"
+    print(f"\ntop1={rep['top1_acc']:.3f}  chance={rep['chance_top1']:.3f}  (+-2SE={2*se:.3f})  ->  {verdict}")
+    print(f"saved -> {out}")
 
 
 if __name__ == "__main__":
