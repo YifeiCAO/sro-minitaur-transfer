@@ -31,13 +31,9 @@ def main():
     cfg = load_config(args.config)
     K = args.K or cfg["eval"]["identification_K"]
 
-    import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from sro_transfer.model.mpop import load_mpop
 
-    tok = AutoTokenizer.from_pretrained(args.mpop)
-    model = AutoModelForCausalLM.from_pretrained(
-        args.mpop, torch_dtype=torch.bfloat16, device_map="auto"
-    )
+    model, tok = load_mpop(cfg, args.mpop)
     score = make_floor_scorer(model, tok, cfg["model"]["max_seq_len"])
 
     nl_dir = cfg["paths"]["nl_dir"]

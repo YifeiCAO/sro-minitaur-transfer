@@ -83,6 +83,41 @@ def load_base_model(cfg: dict):
     return model, tok
 
 
+def load_mpop(cfg: dict, mpop_dir: str | Path):
+    """Reload a trained, FROZEN M_pop: base behavioral FM + the SRO LoRA adapter.
+
+    ``trainer.save_model`` writes only the LoRA adapter, so we must reload the
+    base (merged Minitaur by default) and apply the adapter on top. Returns
+    (model in eval mode with grads off, tokenizer).
+    """
+    import torch
+    from peft import PeftModel
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
+    m = cfg["model"]
+    src = m["base_llm"] if m.get("base_is_adapter") else m["base_model"]
+    bf16_ok = torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8
+    compute_dtype = torch.bfloat16 if bf16_ok else torch.float16
+
+    quant = None
+    if m.get("load_in_4bit"):
+        quant = BitsAndBytesConfig(
+            load_in_4bit=True, bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=compute_dtype, bnb_4bit_use_double_quant=True,
+        )
+    tok = AutoTokenizer.from_pretrained(str(mpop_dir))
+    base = AutoModelForCausalLM.from_pretrained(
+        src, quantization_config=quant, torch_dtype=compute_dtype, device_map="auto",
+    )
+    if m.get("base_is_adapter") and m.get("base_model"):
+        base = PeftModel.from_pretrained(base, m["base_model"]).merge_and_unload()
+    model = PeftModel.from_pretrained(base, str(mpop_dir))  # the trained SRO adapter
+    model.eval()
+    for p in model.parameters():
+        p.requires_grad_(False)
+    return model, tok
+
+
 def build_dataset(sessions: dict[str, str], tokenizer, max_len: int):
     """HF Dataset of response-masked sessions (one row per (subject, task))."""
     from datasets import Dataset
