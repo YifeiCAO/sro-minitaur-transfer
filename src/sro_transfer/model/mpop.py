@@ -118,6 +118,38 @@ def load_mpop(cfg: dict, mpop_dir: str | Path):
     return model, tok
 
 
+def load_for_incontext_finetune(cfg: dict, mpop_dir: str | Path):
+    """Load M_pop with its SRO adapter set TRAINABLE, to continue fine-tuning it
+    on [A-session + B-session] sequences (teach it to use cross-task context).
+    Standard LoRA fine-tune -- no soft-prompt / no backprop-to-input fragility.
+    """
+    import torch
+    from peft import PeftModel
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
+    m = cfg["model"]
+    if m.get("base_is_adapter"):
+        raise NotImplementedError("in-context finetune assumes a merged base_model")
+    bf16_ok = torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8
+    compute_dtype = torch.bfloat16 if bf16_ok else torch.float16
+    quant = None
+    if m.get("load_in_4bit"):
+        quant = BitsAndBytesConfig(
+            load_in_4bit=True, bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=compute_dtype, bnb_4bit_use_double_quant=True,
+        )
+    tok = AutoTokenizer.from_pretrained(str(mpop_dir))
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    base = AutoModelForCausalLM.from_pretrained(
+        m["base_model"], quantization_config=quant, torch_dtype=compute_dtype, device_map="auto",
+    )
+    model = PeftModel.from_pretrained(base, str(mpop_dir), is_trainable=True)
+    model.enable_input_require_grads()           # needed for grad checkpointing
+    model.print_trainable_parameters()
+    return model, tok
+
+
 def build_dataset(sessions: dict[str, str], tokenizer, max_len: int):
     """HF Dataset of response-masked sessions (one row per (subject, task))."""
     from datasets import Dataset
