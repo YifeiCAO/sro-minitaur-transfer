@@ -78,7 +78,7 @@ def main():
             ids, att, lab = _ids(tgt[w])
             loss = tm.target_nll(ids, att, lab, z) / args.grad_accum
             loss.backward()
-            running += float(loss) * args.grad_accum
+            running += loss.detach().item() * args.grad_accum
             if i % args.grad_accum == 0:
                 torch.nn.utils.clip_grad_norm_(params, 1.0)
                 opt.step(); opt.zero_grad()
