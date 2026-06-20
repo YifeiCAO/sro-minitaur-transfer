@@ -23,6 +23,12 @@ def build_soft_prompt_injector(z_dim: int, hidden_size: int, n_soft_tokens: int 
                 nn.Linear(z_dim, hidden_size), nn.GELU(),
                 nn.Linear(hidden_size, n_soft_tokens * hidden_size),
             )
+            # zero-init the output so injection STARTS as a no-op: the prefix is
+            # 0 at init (model unperturbed, NLL ~= floor), then learns small
+            # person-specific perturbations from zero. Without this the random
+            # prefix is catastrophic at init and training collapses to chance.
+            nn.init.zeros_(self.proj[-1].weight)
+            nn.init.zeros_(self.proj[-1].bias)
 
         def prefix_embeds(self, z):
             # z: [B, z_dim] -> [B, n_soft_tokens, hidden_size]

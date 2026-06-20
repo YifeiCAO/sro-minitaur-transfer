@@ -47,7 +47,7 @@ person_transfer:                               # Phase 2
   injection: soft_prompt                       # soft_prompt | film | lora
   n_soft_tokens: 8
   encoder: set_transformer                     # pools a person's source trials -> z
-  lr: 1.0e-3
+  lr: 3.0e-4                                    # lowered: zero-init prefix grows gently
   epochs: 5
 
 eval:
