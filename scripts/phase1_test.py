@@ -2,12 +2,12 @@
 """PHASE 1 TEST -- how well does M_pop predict held-out behavior, PER TASK?
 
 On the held-out test subjects, for every task, report M_pop's:
-  - response-token accuracy  (model argmax == the human's actual response)
-  - mean response NLL
+  - response accuracy: fraction of <<...>> responses the model would reproduce
+    EXACTLY (decision-level -- every token of the response right). This is the
+    honest number: per-TOKEN accuracy is inflated because multi-token responses
+    like <<smaller_sooner>> have trivially predictable continuation subtokens.
+  - mean response NLL (per token)
   - a majority-response baseline (most frequent response), so accuracy is readable
-
-This is the real Phase-1 evaluation: is the population floor a good model of SRO
-behavior on each task? (No individual info yet -- that's Phase 2+.)
 
     python scripts/phase1_test.py --mpop /content/drive/MyDrive/sro_minitaur/mpop \
         --subset starting_subset
@@ -44,21 +44,28 @@ def main():
 
     @torch.no_grad()
     def session_stats(text):
-        """Return (sum_nll, n_correct, n_tok, [actual response token ids])."""
+        """Return (sum_nll, n_tok, [(response_token_tuple, all_tokens_correct)])."""
         e = build_labels(text, tok, max_len)
         ids = torch.tensor([e["input_ids"]], device=model.device)
         att = torch.tensor([e["attention_mask"]], device=model.device)
         lab = torch.tensor(e["labels"], device=model.device)            # [L]
         logits = model(input_ids=ids, attention_mask=att).logits[0]     # [L, V]
-        # causal shift: token at pos i is predicted from logits[i-1]
-        sl, tl = logits[:-1], lab[1:]
+        sl, tl = logits[:-1], lab[1:]                                   # causal shift
+        preds = sl.argmax(-1)
         m = tl != -100
-        if m.sum() == 0:
-            return 0.0, 0, 0, []
-        sl, tl = sl[m], tl[m]
-        nll = F.cross_entropy(sl.float(), tl, reduction="sum")
-        correct = (sl.argmax(-1) == tl).sum()
-        return float(nll), int(correct), int(m.sum()), tl.tolist()
+        sum_nll = float(F.cross_entropy(sl[m].float(), tl[m], reduction="sum")) if m.any() else 0.0
+        n_tok = int(m.sum())
+        # group consecutive response tokens into one response each
+        responses, L, j = [], tl.shape[0], 0
+        while j < L:
+            if tl[j].item() == -100:
+                j += 1; continue
+            k = j
+            while k < L and tl[k].item() != -100:
+                k += 1
+            responses.append((tuple(tl[j:k].tolist()), bool((preds[j:k] == tl[j:k]).all())))
+            j = k
+        return sum_nll, n_tok, responses
 
     rows = []
     for task in tasks:
@@ -66,31 +73,32 @@ def main():
         held = [w for w in split.heldout if w in tgt]
         if args.limit:
             held = held[: args.limit]
-        s_nll = n_cor = n_tok = 0
-        all_tokens = Counter()
+        s_nll = n_tok = r_correct = r_total = 0
+        r_counter = Counter()
         for w in held:
-            nll, cor, ntok, toks = session_stats(tgt[w])
-            s_nll += nll; n_cor += cor; n_tok += ntok
-            all_tokens.update(toks)
-        if n_tok == 0:
+            nll, ntok, responses = session_stats(tgt[w])
+            s_nll += nll; n_tok += ntok
+            for lab_ids, correct in responses:
+                r_total += 1; r_correct += int(correct); r_counter[lab_ids] += 1
+        if r_total == 0:
             continue
-        majority = max(all_tokens.values()) / sum(all_tokens.values())
+        majority = max(r_counter.values()) / r_total
         rows.append({
-            "task": task, "n_subj": len(held), "n_resp_tokens": n_tok,
-            "accuracy": round(n_cor / n_tok, 4),
+            "task": task, "n_subj": len(held), "n_responses": r_total,
+            "accuracy": round(r_correct / r_total, 4),
             "majority_baseline": round(majority, 4),
-            "mean_nll": round(s_nll / n_tok, 4),
+            "mean_nll": round(s_nll / max(n_tok, 1), 4),
         })
-        print(f"  {task:<28} acc={n_cor/n_tok:.3f} (base {majority:.3f})  nll={s_nll/n_tok:.3f}  n={len(held)}")
+        print(f"  {task:<28} acc={r_correct/r_total:.3f} (base {majority:.3f})  nll={s_nll/max(n_tok,1):.3f}  n={len(held)}")
 
     overall = {
-        "phase": "1-test",
+        "phase": "1-test", "metric": "per-response (decision-level) accuracy",
         "macro_accuracy": round(sum(r["accuracy"] for r in rows) / max(len(rows), 1), 4),
         "per_task": rows,
     }
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(overall, indent=2))
-    print(f"\nmacro accuracy over tasks = {overall['macro_accuracy']:.3f}")
+    print(f"\nmacro per-response accuracy = {overall['macro_accuracy']:.3f}")
     print(f"saved -> {args.out}")
 
 
