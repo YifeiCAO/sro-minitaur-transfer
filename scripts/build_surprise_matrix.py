@@ -52,7 +52,7 @@ def main():
     seed, max_len = cfg["split"]["seed"], cfg["model"]["max_seq_len"]
     rdir = cfg["paths"]["results"]
     tax = load_tasks()
-    tasks = tax["subsets"][args.subset]
+    tasks = sorted(tax["tasks"]) if args.subset == "all" else tax["subsets"][args.subset]
     domain = {t: tax["tasks"][t]["domain"] for t in tasks}
     model, tok = get_model(cfg, args.mpop)
 
