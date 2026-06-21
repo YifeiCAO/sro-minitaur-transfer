@@ -277,6 +277,39 @@
         <td><span class="wt">⋯</span> <span class="zh"> 进行中(量级锚点)</span><span class="en"> running (magnitude anchor)</span></td></tr>
     </tbody>
   </table>
+
+  <table style="margin-top:26px">
+    <caption class="zh">表 2. 域内跨任务识别 top-1(随机 = 0.10)。✓ 显著迁移,○ ≈随机,— 数据退化(测不了)。</caption>
+    <caption class="en">Table 2. Within-domain cross-task identification top-1 (chance = 0.10). ✓ significant, ○ ≈ chance, — degenerate (unmeasurable).</caption>
+    <thead><tr>
+      <th class="zh">域</th><th class="en">Domain</th>
+      <th class="zh">任务对</th><th class="en">Task pair</th>
+      <th>id top-1</th>
+      <th></th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="zh">延迟折扣</td><td class="en">discounting</td>
+        <td class="zh">kirby ↔ bickel ↔ discount(3 个不同范式 · 6 对)</td><td class="en">kirby ↔ bickel ↔ discount (3 paradigms · 6 pairs)</td>
+        <td>0.20 – 0.37</td><td><span class="ok">✓</span></td></tr>
+      <tr><td class="zh">风险</td><td class="en">risk</td>
+        <td class="zh">CCT 冷 ↔ 热(同一任务两版)</td><td class="en">CCT cold ↔ hot (two versions of one task)</td>
+        <td>0.32 / 0.40</td><td><span class="ok">✓</span></td></tr>
+      <tr><td class="zh">风险</td><td class="en">risk</td>
+        <td class="zh">CCT ↔ 信息采样 IST(差异很大,4 对)</td><td class="en">CCT ↔ information-sampling (very different, 4 pairs)</td>
+        <td>0.04 – 0.13</td><td><span class="no">○</span></td></tr>
+      <tr><td class="zh">冲突/记忆</td><td class="en">conflict</td>
+        <td class="zh">定向遗忘 ↔ 近探针(双向,不同任务)</td><td class="en">directed-forgetting ↔ recent-probes (both ways)</td>
+        <td>0.16 / 0.17</td><td><span class="ok">✓</span></td></tr>
+      <tr><td class="zh">冲突/记忆</td><td class="en">conflict</td>
+        <td class="zh">DPX → 近探针 / 定向遗忘(DPX 作来源)</td><td class="en">DPX → recent / DF (DPX as source)</td>
+        <td>0.17 / 0.08</td><td><span class="wt">◑</span></td></tr>
+      <tr><td class="zh">— 退化</td><td class="en">— degenerate</td>
+        <td class="zh">→ DPX(作目标,编码 bug)· RL two_stage(太长被截)</td><td class="en">→ DPX (as target, encoder bug) · RL two_stage (truncated)</td>
+        <td>nan</td><td><span class="no">—</span></td></tr>
+    </tbody>
+  </table>
+  <p class="small mut zh" style="margin-top:14px">关键:迁移在<b>三个不同折扣范式</b>之间、在<b>定向遗忘↔近探针</b>这两个不同任务之间都显著成立——<b>不是"同任务才行"</b>。唯一确凿的零是两个差异极大的风险任务(CCT↔IST)。</p>
+  <p class="small mut en" style="margin-top:14px">Key: transfer holds across <b>three different discounting paradigms</b> and between the two different conflict tasks (<b>DF↔recent-probes</b>) — it is <b>not</b> "same-task only". The only clear null is between two very different risk tasks (CCT↔IST).</p>
 </div></section>
 
 <section><div class="wrap">
