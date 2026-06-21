@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRO × Minitaur — Cross-task Individual Transfer</title>
+<style>
+  :root{
+    --bg:#0a0d14; --bg2:#0f141f; --card:#141a26; --card2:#1a2231;
+    --ink:#e7edf6; --mut:#93a1b5; --dim:#64748b; --line:#222c3c;
+    --acc1:#56d4c4; --acc2:#8b7cf6; --acc3:#f0a868;
+    --good:#46d39a; --warn:#f0b35e; --bad:#f0676b;
+    --grad:linear-gradient(120deg,#56d4c4,#8b7cf6 55%,#f0a868);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:radial-gradient(1200px 700px at 80% -10%,#16203250,transparent),
+        radial-gradient(900px 600px at 0% 0%,#1d182f40,transparent),var(--bg);
+        color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",
+        "PingFang SC","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
+        -webkit-font-smoothing:antialiased}
+  a{color:var(--acc1);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:0 22px}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);
+      background:#0a0d14cc;border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:58px}
+  .brand{font-weight:700;letter-spacing:.3px}
+  .brand b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .navr{display:flex;gap:14px;align-items:center}
+  .navr a{color:var(--mut);font-size:14px}
+  .toggle{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+  .toggle button{background:transparent;border:0;color:var(--mut);padding:6px 13px;
+      font-size:13px;cursor:pointer;font-weight:600}
+  .toggle button.on{background:var(--grad);color:#08111c}
+
+  /* hero */
+  header{padding:74px 0 50px}
+  .eyebrow{display:inline-block;font-size:12.5px;letter-spacing:1.5px;text-transform:uppercase;
+      color:var(--acc1);border:1px solid var(--line);border-radius:999px;padding:5px 13px;margin-bottom:22px}
+  h1{font-size:clamp(30px,5vw,50px);line-height:1.12;margin:0 0 20px;font-weight:800;letter-spacing:-.5px}
+  h1 .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lead{font-size:clamp(16px,2.1vw,19px);color:var(--mut);max-width:760px}
+  .badges{display:flex;flex-wrap:wrap;gap:9px;margin-top:28px}
+  .badge{font-size:13px;color:var(--ink);background:var(--card);border:1px solid var(--line);
+      padding:7px 13px;border-radius:8px}
+  .badge b{color:var(--acc1)}
+
+  section{padding:42px 0;border-top:1px solid var(--line)}
+  h2{font-size:clamp(22px,3vw,30px);margin:0 0 8px;font-weight:750;letter-spacing:-.3px}
+  .sub{color:var(--dim);margin:0 0 26px;font-size:14.5px}
+  h3{font-size:17px;margin:26px 0 8px;color:var(--ink)}
+  p{color:#c4cfdd}
+  .muted{color:var(--mut)}
+
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:760px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+  .card{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--line);
+      border-radius:14px;padding:20px}
+  .card h3{margin-top:0}
+  .stat{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--line);
+      border-radius:14px;padding:20px;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--grad)}
+  .stat .num{font-size:34px;font-weight:800;letter-spacing:-1px;line-height:1}
+  .stat .num.g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .lab{font-size:13.5px;color:var(--mut);margin-top:9px}
+  .stat .note{font-size:12.5px;color:var(--dim);margin-top:6px}
+
+  .steps{counter-reset:s;display:grid;gap:14px}
+  .step{display:flex;gap:15px;align-items:flex-start;background:var(--card);border:1px solid var(--line);
+      border-radius:12px;padding:16px 18px}
+  .step::before{counter-increment:s;content:counter(s);flex:0 0 30px;height:30px;border-radius:8px;
+      display:grid;place-items:center;font-weight:800;font-size:14px;background:var(--grad);color:#08111c}
+  .step b{color:var(--ink)}
+
+  table{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px;overflow:hidden;
+      border:1px solid var(--line);border-radius:12px}
+  th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.5px;
+      background:var(--bg2)}
+  td:first-child{font-weight:600;color:var(--ink)}
+  tr:last-child td{border-bottom:0}
+  .pill{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px}
+  .pill.ok{background:#13352a;color:var(--good)}
+  .pill.no{background:#3a1f20;color:var(--bad)}
+  .pill.wt{background:#352c16;color:var(--warn)}
+
+  .box{border-radius:14px;padding:20px 22px;border:1px solid var(--line)}
+  .box.key{background:linear-gradient(120deg,#13201f,#161a2b);border-color:#2a3b4a}
+  .box.key .t{color:var(--acc1);font-weight:750;font-size:15px;margin-bottom:8px}
+  .box.honest{background:linear-gradient(120deg,#241c10,#1a1622);border-color:#3a3324}
+  .box.honest .t{color:var(--acc3);font-weight:750;font-size:15px;margin-bottom:8px}
+
+  ul.clean{list-style:none;padding:0;margin:10px 0}
+  ul.clean li{padding:7px 0 7px 26px;position:relative;color:#c4cfdd}
+  ul.clean li::before{content:"▸";position:absolute;left:4px;color:var(--acc1)}
+
+  footer{padding:40px 0 60px;border-top:1px solid var(--line);color:var(--dim);font-size:13.5px}
+  footer a{color:var(--mut)}
+  .cta{display:inline-block;margin-top:6px;background:var(--grad);color:#08111c;font-weight:700;
+      padding:11px 20px;border-radius:10px}
+  .cta:hover{text-decoration:none;opacity:.92}
+
+  .zh,.en{display:none}
+  body.lang-zh .zh{display:revert}
+  body.lang-en .en{display:revert}
+  body.lang-zh li.zh,body.lang-en li.en{display:list-item}
+  code{background:#0c1119;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:13px;color:#bfe7e0}
+</style>
+</head>
+<body class="lang-zh">
+
+<nav><div class="wrap">
+  <div class="brand"><b>SRO × Minitaur</b></div>
+  <div class="navr">
+    <a href="#results" class="zh">结果</a><a href="#results" class="en">Results</a>
+    <a href="#audit" class="zh">可靠性</a><a href="#audit" class="en">Audit</a>
+    <a href="https://github.com/YifeiCAO/sro-minitaur-transfer" target="_blank">GitHub ↗</a>
+    <div class="toggle">
+      <button id="bzh" class="on" onclick="setLang('zh')">中</button>
+      <button id="ben" onclick="setLang('en')">EN</button>
+    </div>
+  </div>
+</div></nav>
+
+<header><div class="wrap">
+  <span class="eyebrow zh">行为基础模型 × 个体差异</span>
+  <span class="eyebrow en">Behavioral Foundation Models × Individual Differences</span>
+  <h1 class="zh">你在一个任务上的行为,<span class="g">能预测你在另一个任务上的行为吗?</span></h1>
+  <h1 class="en">Does how you behave on one task <span class="g">predict how you behave on another?</span></h1>
+  <p class="lead zh">我们微调一个行为基础模型(<b>Minitaur</b> = Llama-3.1-8B + Psych-101),让它读一个人在任务 A 上<b>逐试次的选择</b>,去预测同一个人在任务 B 上的选择 —— 基于 Self-Regulation Ontology(522 人 · 11 个认知任务)。核心问题:基础模型捕捉到的"认知指纹",能不能<b>跨任务迁移</b>?</p>
+  <p class="lead en">We fine-tune a behavioral foundation model (<b>Minitaur</b> = Llama-3.1-8B + Psych-101) to read a person's <b>trial-by-trial choices</b> on task A and predict the same person's choices on task B — across the Self-Regulation Ontology (522 people · 11 cognitive tasks). The question: does the "cognitive fingerprint" a foundation model captures <b>transfer across tasks</b>?</p>
+  <div class="badges">
+    <div class="badge zh">📊 <b>522</b> 名被试</div><div class="badge en">📊 <b>522</b> subjects</div>
+    <div class="badge zh">🧩 <b>11</b> 个任务 · 4 个域</div><div class="badge en">🧩 <b>11</b> tasks · 4 domains</div>
+    <div class="badge zh">🎯 仅用<b>选择</b>(不含反应时)</div><div class="badge en">🎯 <b>choice-only</b> (no RT)</div>
+    <div class="badge zh">🔬 上下文微调 + 置乱对照</div><div class="badge en">🔬 in-context fine-tune + shuffled control</div>
+  </div>
+</div></header>
+
+<section id="q"><div class="wrap">
+  <h2 class="zh">研究问题</h2><h2 class="en">The question</h2>
+  <p class="sub zh">从"手工总结分数"到"模型读原始行为"</p>
+  <p class="sub en">From hand-crafted summary scores to a model reading raw behavior</p>
+  <p class="zh">个体差异通常用手工设计的总结量(一个折扣率、一个 d′)来刻画。我们换个问法:一个在<b>原始人类行为</b>上训练出来的基础模型,是否在它的内部状态里携带了一个人的认知特征,并且这种特征能<b>跨任务迁移</b>?更关键的是 —— 这种迁移是真实的认知过程,还是仅仅反映了一个人稳定的<b>选择偏好</b>?</p>
+  <p class="en">Individual differences are usually captured with hand-crafted summary scores (a discount rate, a d′). We ask it differently: does a foundation model trained on <b>raw human behavior</b> carry a person's cognitive signature in a way that <b>transfers across tasks</b> — and crucially, is that transfer a genuine cognitive process, or merely a person's stable <b>response bias</b>?</p>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <h2 class="zh">怎么做的</h2><h2 class="en">Approach</h2>
+  <p class="sub zh">人类行为 → 自然语言 → 基础模型 → 置乱对照</p>
+  <p class="sub en">Human behavior → natural language → foundation model → shuffled control</p>
+  <div class="steps">
+    <div class="step"><div><b class="zh">底座模型 — Minitaur。</b><b class="en">Base model — Minitaur.</b>
+      <span class="zh"> Llama-3.1-8B 在 Psych-101(人类心理学实验)上微调而成的小号 Centaur。损失只算在人类的<b>选择 token</b>(<code>&lt;&lt;...&gt;&gt;</code>)上 —— 即"仅选择",不建模反应时。</span>
+      <span class="en"> A small Centaur: Llama-3.1-8B fine-tuned on Psych-101 (human psychology experiments). Loss is computed <b>only on the human's choice tokens</b> (<code>&lt;&lt;...&gt;&gt;</code>) — choice-only, reaction time is not modeled.</span></div></div>
+    <div class="step"><div><b class="zh">数据 — Self-Regulation Ontology。</b><b class="en">Data — Self-Regulation Ontology.</b>
+      <span class="zh"> Eisenberg & Poldrack (2019),522 人,11 个任务横跨 4 个域(延迟折扣、风险决策、强化学习、冲突/记忆控制),全部渲染成自然语言逐试次记录。</span>
+      <span class="en"> Eisenberg & Poldrack (2019). 522 subjects, 11 tasks across 4 domains (delay discounting, risky choice, reinforcement learning, conflict/memory-control), all rendered as natural-language trial-by-trial transcripts.</span></div></div>
+    <div class="step"><div><b class="zh">方法 — 教模型读"前一个任务"。</b><b class="en">Method — teach the model to read the prior task.</b>
+      <span class="zh"> ①训练一个群体模型 M_pop;②在拼接的 <code>[任务A + 任务B]</code> 序列上继续微调,让模型学会以前一个任务的行为为条件;③测试时,对留出被试,用他<b>自己的</b> A 记录 vs 一个<b>随机陌生人的</b> A 记录,分别给他的 B 选择打分。</span>
+      <span class="en"> (1) train a population model M_pop; (2) further fine-tune on concatenated <code>[task-A + task-B]</code> sequences so the model learns to condition on prior-task behavior; (3) at test, for a held-out person, score their task-B choices given their <b>own</b> task-A transcript vs a <b>random stranger's</b>.</span></div></div>
+    <div class="step"><div><b class="zh">判据 — 置乱对照。</b><b class="en">The test — the shuffled control.</b>
+      <span class="zh"> 如果"用自己的 A"比"用陌生人的 A"更能预测自己的 B(更低的 NLL),那就是<b>个体特异的</b>跨任务迁移,而不只是模型变聪明了。</span>
+      <span class="en"> If your <b>own</b> A predicts your B better (lower NLL) than a <b>stranger's</b> A does, the signal is <b>person-specific</b> cross-task transfer — not just a smarter model.</span></div></div>
+  </div>
+
+  <div class="box key" style="margin-top:22px">
+    <div class="t zh">💡 核心洞察:为什么个体信号"天生很薄"</div>
+    <div class="t en">💡 Key idea: why the individual signal is thin by design</div>
+    <p class="zh muted" style="margin:0">因为模型只在<b>选择</b>上算损失,它的隐状态编码的是<b>群体在给定刺激下的预期选择</b> —— 这在人与人之间是共享的、与个体无关。个体只活在<b>残差</b>里:模型对你<b>实际选择</b>的惊讶程度。所以可迁移的信号本来就薄(反应时对它不可见)—— 而这恰恰是这项研究的科学看点。</p>
+    <p class="en muted" style="margin:0">Because the model is trained only on <b>choices</b>, its hidden states encode the <b>population's expected choice given the stimulus</b> — shared across people, person-invariant. The individual lives in the <b>residual</b>: how surprised the model is by <b>your actual choices</b>. So the transferable signal is thin by construction (reaction time is invisible to it) — which is exactly the scientific point.</p>
+  </div>
+</div></section>
+
+<section id="results"><div class="wrap">
+  <h2 class="zh">结果</h2><h2 class="en">Results</h2>
+  <p class="sub zh">信号存在 · 群体模型很强 · 个体迁移真实但温和</p>
+  <p class="sub en">Signal exists · the population model is strong · individual transfer is real but modest</p>
+
+  <div class="grid g4">
+    <div class="stat"><div class="num g">0.35</div>
+      <div class="lab zh">手工指标的域内迁移(跨域仅 0.05)—— 信号确实存在</div>
+      <div class="lab en">handcrafted within-domain transfer (across only 0.05) — signal exists</div></div>
+    <div class="stat"><div class="num g">0.75</div>
+      <div class="lab zh">群体模型 M_pop 预测留出选择的宏平均准确率</div>
+      <div class="lab en">M_pop macro accuracy predicting held-out choices</div></div>
+    <div class="stat"><div class="num g">85%</div>
+      <div class="lab zh">kirby→折扣:自己的 A 比陌生人更准的人数占比</div>
+      <div class="lab en">kirby→discounting: share of people whose own A wins</div>
+      <div class="note zh">Δ = −0.012 nats</div><div class="note en">Δ = −0.012 nats</div></div>
+    <div class="stat"><div class="num g">73%</div>
+      <div class="lab zh">遗忘→近探针:同上(目标任务选择均衡,抗"偏好"解释)</div>
+      <div class="lab en">DF→recent-probes: same (balanced target → base-rate-robust)</div>
+      <div class="note zh">Δ = −0.006 nats</div><div class="note en">Δ = −0.006 nats</div></div>
+  </div>
+
+  <h3 class="zh" style="margin-top:30px">完整结果</h3><h3 class="en" style="margin-top:30px">Full results</h3>
+  <table>
+    <thead><tr>
+      <th class="zh">阶段</th><th class="en">Stage</th>
+      <th class="zh">做了什么</th><th class="en">What</th>
+      <th class="zh">结果</th><th class="en">Result</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>0c</td>
+        <td class="zh">手工总结量(含反应时)的跨任务迁移矩阵</td><td class="en">Transfer via hand-crafted summary scores (incl. RT)</td>
+        <td class="zh">域内 <b>0.35</b> ≫ 跨域 0.05。最强:kirby→折扣 0.85</td><td class="en">within <b>0.35</b> ≫ across 0.05. strongest: kirby→discount 0.85</td></tr>
+      <tr><td>M_pop</td>
+        <td class="zh">群体微调,在留出被试上逐选择预测</td><td class="en">Population fine-tune, per-choice prediction on held-out</td>
+        <td class="zh">宏平均 <b>0.75</b>,多数任务远超多数类基线</td><td class="en">macro <b>0.75</b>, beats majority baseline on most tasks</td></tr>
+      <tr><td class="zh">上下文微调</td><td class="en">in-context fine-tune</td>
+        <td class="zh">在 [A+B] 上微调,留出被试 real vs 置乱-A</td><td class="en">fine-tune on [A+B]; held-out real vs shuffled-A</td>
+        <td>
+          <span class="pill ok">✓</span>
+          <span class="zh"> 两对都干净的个体迁移:kirby→折扣 Δ−0.012(85%)、遗忘→近探针 Δ−0.006(73%)。量级与 0c 一致(折扣最强)</span>
+          <span class="en"> two clean person-specific pairs: kirby→discount Δ−0.012 (85%), DF→recent-probes Δ−0.006 (73%). magnitude tracks 0c (discounting strongest)</span></td></tr>
+      <tr><td class="zh">上下文·零样本</td><td class="en">in-context zero-shot</td>
+        <td class="zh">不微调,直接把 A 放到 B 前面</td><td class="en">no training, just prepend A before B</td>
+        <td><span class="pill no">∅</span> <span class="zh"> 零结果 —— 不微调时模型忽略跨任务上下文</span><span class="en"> null — without fine-tuning the model ignores cross-task context</span></td></tr>
+      <tr><td class="zh">重测天花板</td><td class="en">retest ceiling</td>
+        <td class="zh">同任务 time1→time2 的可识别度(上界)</td><td class="en">same-task time1→time2 identifiability (upper bound)</td>
+        <td><span class="pill wt">⏳</span> <span class="zh"> 进行中 —— 用来解读迁移量级</span><span class="en"> running — to interpret the magnitude</span></td></tr>
+    </tbody>
+  </table>
+</div></section>
+
+<section id="audit"><div class="wrap">
+  <h2 class="zh">结果可靠吗?</h2><h2 class="en">Is it real?</h2>
+  <p class="sub zh">6 个对抗审计智能体,把每个关键判断重新核对了代码与数据</p>
+  <p class="sub en">A 6-agent adversarial audit re-ran every load-bearing check against the code and data</p>
+  <div class="grid g2">
+    <div class="card">
+      <h3 class="zh" style="color:var(--good)">✓ 已确认稳固</h3><h3 class="en" style="color:var(--good)">✓ Confirmed solid</h3>
+      <ul class="clean">
+        <li class="zh">NLL / 掩码 / 因果对齐正确且对称 —— <b>没有 bug</b></li><li class="en">NLL / masking / causal-shift correct & symmetric — <b>no bug</b></li>
+        <li class="zh">训练/测试 <b>0% 泄漏</b>(重跑了划分逻辑)</li><li class="en"><b>0% train/test leakage</b> (re-ran the split logic)</li>
+        <li class="zh">置乱对照公平;文本里<b>无被试 ID</b>、无刺激捷径</li><li class="en">fair control; <b>no subject-ID</b> in text, no stimulus shortcut</li>
+        <li class="zh">显著性在数学上自洽(dz≈1.1,符号检验 88/104)</li><li class="en">significance self-consistent (dz≈1.1, sign test 88/104)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 class="zh" style="color:var(--warn)">⚠ 下结论前要补</h3><h3 class="en" style="color:var(--warn)">⚠ Must check before claiming</h3>
+      <ul class="clean">
+        <li class="zh"><b>基准率对照</b>(最大风险):自己的 A 可能只泄漏了你的选择率。对照"选择率最接近的陌生人",若 real 仍更优 ⇒ 是迁移不是偏好。<b>进行中</b></li>
+        <li class="en"><b>Base-rate control</b> (biggest risk): own-A might just leak your choice rate. Compare against the marginal-matched stranger; if own still wins ⇒ transfer, not bias. <b>In progress</b></li>
+        <li class="zh"><b>统计量</b>:把虚高的 t 检验换成<b>置换检验</b> + 自助置信区间。<b>已实现</b></li>
+        <li class="en"><b>Statistic</b>: replace the inflated t-test with a <b>permutation null</b> + bootstrap CI. <b>Implemented</b></li>
+        <li class="zh"><b>域内 ≫ 跨域</b>:全矩阵 + FDR 校正,把"条件作用"升级为"域特异迁移"。<b>进行中</b></li>
+        <li class="en"><b>within ≫ across</b>: full matrix + FDR, to upgrade "conditioning" to "domain-specific transfer". <b>In progress</b></li>
+      </ul>
+    </div>
+  </div>
+  <p class="muted zh" style="margin-top:18px;font-size:14px">审计结论:代码计算的就是它声称的东西,没有制造假象的 bug;划分干净、对照公平(均经独立复核)。<b>作为一个机制,结果是真实的</b> —— 在说"迁移"这个词之前,先完成上面两项对照。</p>
+  <p class="muted en" style="margin-top:18px;font-size:14px">Audit bottom line: the code computes what it claims, with no artifact-producing bug; the split is clean and the control is fair (independently verified). <b>The result is real as a mechanism</b> — finish the two controls above before publishing the word "transfer".</p>
+</div></section>
+
+<section id="honest"><div class="wrap">
+  <div class="box honest">
+    <div class="t zh">⚖️ 诚实评估</div><div class="t en">⚖️ Honest read</div>
+    <p class="zh" style="margin:0 0 10px">效应<b>小但方向极稳</b>(73–85% 的人都成立)。这与一个核心论点一致:个体可迁移信号的<b>很大一部分由反应时承载</b>,而一个仅选择的模型看不见它。</p>
+    <p class="en" style="margin:0 0 10px">The effect is <b>small but rock-solid in direction</b> (73–85% of people). This fits a core thesis: much of the transferable individual signal is carried by <b>reaction time</b>, which a choice-only model cannot see.</p>
+    <p class="zh muted" style="margin:0">今天能站得住的最强表述:<i>在同一个认知域内,用一个人自己的前序任务作条件,会比用陌生人的更能降低他下一个任务选择的 NLL。</i>补上基准率对照与"域内>跨域",即可升级为"迁移"。</p>
+    <p class="en muted" style="margin:0">Strongest defensible claim today: <i>within a cognitive domain, conditioning the model on a person's own prior session lowers their next-task choice NLL more than a stranger's does.</i> The base-rate control + within>across upgrade this to "transfer".</p>
+  </div>
+</div></section>
+
+<section id="status"><div class="wrap">
+  <h2 class="zh">进度</h2><h2 class="en">Status</h2>
+  <div class="grid g3">
+    <div class="card"><h3 class="zh">✅ 已完成</h3><h3 class="en">✅ Done</h3>
+      <ul class="clean">
+        <li class="zh">7 个任务的自然语言编码</li><li class="en">NL-encoded 7 additional tasks</li>
+        <li class="zh">群体模型 M_pop(宏 0.75)</li><li class="en">population model M_pop (macro 0.75)</li>
+        <li class="zh">上下文微调:2 对阳性</li><li class="en">in-context fine-tune: 2 positive pairs</li>
+        <li class="zh">对抗审计 + 加固脚本</li><li class="en">adversarial audit + hardening scripts</li>
+      </ul></div>
+    <div class="card"><h3 class="zh">🔄 进行中</h3><h3 class="en">🔄 Running</h3>
+      <ul class="clean">
+        <li class="zh">基准率对照(防最大风险)</li><li class="en">base-rate control (defends biggest risk)</li>
+        <li class="zh">全任务迁移矩阵(域内/跨域)</li><li class="en">full transfer matrix (within/across)</li>
+        <li class="zh">重测天花板(量级锚点)</li><li class="en">retest ceiling (magnitude anchor)</li>
+      </ul></div>
+    <div class="card"><h3 class="zh">🎯 两种结局都可发表</h3><h3 class="en">🎯 Both outcomes publishable</h3>
+      <p class="zh muted" style="margin:0;font-size:14px"><b>阳性:</b>逐试次序列携带可跨任务迁移的个体结构。<b>零结果:</b>即使高余量任务也≈随机 ⇒ 选择层面的个体差异不跨任务迁移的干净模型证据。</p>
+      <p class="en muted" style="margin:0;font-size:14px"><b>Positive:</b> trial-level sequences carry transferable individual structure. <b>Null:</b> even high-headroom pairs ≈ chance ⇒ clean model-based evidence that choice-level individual differences don't transfer across tasks.</p>
+    </div>
+  </div>
+  <div style="margin-top:24px">
+    <a class="cta" href="https://github.com/YifeiCAO/sro-minitaur-transfer" target="_blank">
+      <span class="zh">查看代码与脚本 →</span><span class="en">Browse the code & scripts →</span></a>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <p class="zh">基于 Centaur / Psych-101(Binz 等)与 Self-Regulation Ontology(Eisenberg & Poldrack, 2019)。合作者:Jian-Qiao Zhu、Hanbo Xie。</p>
+  <p class="en">Built on Centaur / Psych-101 (Binz et al.) and the Self-Regulation Ontology (Eisenberg & Poldrack, 2019). Collaborators: Jian-Qiao Zhu, Hanbo Xie.</p>
+  <p><a href="https://github.com/YifeiCAO/sro-minitaur-transfer" target="_blank">github.com/YifeiCAO/sro-minitaur-transfer</a></p>
+</div></footer>
+
+<script>
+  function setLang(l){
+    document.body.className = 'lang-' + l;
+    document.documentElement.lang = (l==='zh') ? 'zh' : 'en';
+    document.getElementById('bzh').classList.toggle('on', l==='zh');
+    document.getElementById('ben').classList.toggle('on', l==='en');
+    try{ localStorage.setItem('sro_lang', l); }catch(e){}
+  }
+  try{ var s = localStorage.getItem('sro_lang'); if(s) setLang(s); }catch(e){}
+</script>
+</body>
+</html>
