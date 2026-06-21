@@ -53,12 +53,19 @@ def main():
                     help="override model.max_seq_len (e.g. 2048 to roughly halve training time)")
     ap.add_argument("--nl-dir", default=None,
                     help="override paths.nl_dir (e.g. point at output_nl_rt for the RT model)")
+    ap.add_argument("--batch-size", type=int, default=None,
+                    help="per-device train batch (raise to fill a bigger GPU; default cfg=1)")
+    ap.add_argument("--grad-accum", type=int, default=None, help="gradient accumulation steps")
     args = ap.parse_args()
     cfg = load_config(args.config)
     if args.max_seq_len:
         cfg["model"]["max_seq_len"] = args.max_seq_len
     if args.nl_dir:
         cfg["paths"]["nl_dir"] = args.nl_dir
+    if args.batch_size:
+        cfg["mpop_finetune"]["batch_size"] = args.batch_size
+    if args.grad_accum:
+        cfg["mpop_finetune"]["grad_accum"] = args.grad_accum
     taxonomy = load_tasks()
 
     if args.subset == "all":
