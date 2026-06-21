@@ -35,8 +35,8 @@ cross-task **identification** (rank-based, dodges NLL dilution); chance = 1/K.
 | **surprise-rep diagnostic** | DF→recent_probes, training-free | **top1 0.18 vs 0.10 chance (~2.8 SD, p≈0.002)** — real, modest |
 | **surprise-rep matrix (11 tasks)** | per-person surprise profiles, all pairs | **within 0.153 > across 0.115 > chance 0.10** — right structure, modest, cell-level noisy |
 | **in-context zero-shot** | put A's transcript before B, no training | **null** — real ≈ floor ≈ shuffled. Minitaur ignores cross-task context zero-shot |
-| **in-context fine-tune (multi-pair)** | train M_pop on [A+B] seqs to use context | **running** (loss 0.5→0.27, learning); eval pending |
-| **retest ceiling** | same-task time1→time2 identification (upper bound) | **running / pending** — needed to interpret the 0.15 |
+| **in-context fine-tune (multi-pair)** | train M_pop on [A+B] seqs; eval on heldout DF→recent_probes | ✅ **real < shuffled −0.0059 (p=6e-6), real < floor (p=2e-4), 73% of people** — clean person-specific cross-task transfer. Verified no subject-ID leakage in the text. Small per-token magnitude (choice-only), but rock-solid direction. Zero-shot was null → fine-tuning taught the model to use cross-task context |
+| **retest ceiling** | same-task time1→time2 identification (upper bound) | **running / pending** — needed to interpret the magnitude |
 
 ## 4. Key insight (why soft-prompt failed, why surprise works)
 
