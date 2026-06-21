@@ -50,6 +50,7 @@ def main():
     ap.add_argument("--base-model", default=None, help="override cfg model.base_model")
     ap.add_argument("--base-llm", default=None, help="override cfg model.base_llm (adapter case)")
     ap.add_argument("--base-is-adapter", action="store_true", help="base_model is a LoRA adapter on base_llm")
+    ap.add_argument("--nl-dir", default=None, help="override paths.nl_dir (e.g. output_nl_rt for the RT model)")
     ap.add_argument("--max-seq-len", type=int, default=None)
     ap.add_argument("--batch-tokens", type=int, default=8192,
                     help="B*L tokens per batched forward; raise to fill VRAM (e.g. 32768 for 70B on 96GB). 0 = one-at-a-time")
@@ -58,6 +59,7 @@ def main():
     from sklearn.linear_model import Ridge
 
     cfg = load_config(args.config)
+    if args.nl_dir: cfg["paths"]["nl_dir"] = args.nl_dir
     m = cfg["model"]                                   # apply CLI overrides
     if args.base_model: m["base_model"] = args.base_model
     if args.base_llm: m["base_llm"] = args.base_llm

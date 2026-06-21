@@ -51,10 +51,14 @@ def main():
                     help="output dir -- point at Google Drive so it survives a Colab disconnect")
     ap.add_argument("--max-seq-len", type=int, default=None,
                     help="override model.max_seq_len (e.g. 2048 to roughly halve training time)")
+    ap.add_argument("--nl-dir", default=None,
+                    help="override paths.nl_dir (e.g. point at output_nl_rt for the RT model)")
     args = ap.parse_args()
     cfg = load_config(args.config)
     if args.max_seq_len:
         cfg["model"]["max_seq_len"] = args.max_seq_len
+    if args.nl_dir:
+        cfg["paths"]["nl_dir"] = args.nl_dir
     taxonomy = load_tasks()
 
     if args.subset == "all":
