@@ -51,6 +51,8 @@ def main():
     ap.add_argument("--base-llm", default=None, help="override cfg model.base_llm (adapter case)")
     ap.add_argument("--base-is-adapter", action="store_true", help="base_model is a LoRA adapter on base_llm")
     ap.add_argument("--max-seq-len", type=int, default=None)
+    ap.add_argument("--batch-tokens", type=int, default=8192,
+                    help="B*L tokens per batched forward; raise to fill VRAM (e.g. 32768 for 70B on 96GB). 0 = one-at-a-time")
     ap.add_argument("--tag", default="", help="suffix for cache/output (keeps 8B vs 70B separate)")
     args = ap.parse_args()
     from sklearn.linear_model import Ridge
@@ -77,7 +79,8 @@ def main():
     summ, splits = {}, {}
     for t in tasks:
         sess = load_sessions(cfg["paths"]["nl_dir"], t, "complete")
-        prof = build_or_load_profiles(model, tok, sess, Path(rdir) / f"surprise{tagsuf}" / f"{t}.pt", max_len)
+        prof = build_or_load_profiles(model, tok, sess, Path(rdir) / f"surprise{tagsuf}" / f"{t}.pt",
+                                      max_len, batch_tokens=args.batch_tokens)
         summ[t] = {w: summarize_profile(p) for w, p in prof.items()}
         retest = list(load_sessions(cfg["paths"]["nl_dir"], t, "retest"))
         splits[t] = make_splits(list(sess), retest, cfg["split"]["heldout_frac"], seed)
