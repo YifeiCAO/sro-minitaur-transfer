@@ -104,5 +104,5 @@ actual choices (NLL of their responses = "surprise profile").
   don't transfer across tasks — extends Eisenberg 2019 and answers the
   persona-induction negative in Binz et al. 2026.
 
-_Collaborators: Jian-Qiao Zhu, Hanbo Xie (authors on Binz 2026 / the ICLR 2026
-"RL to explain human decisions" paper — directly adjacent)._
+_Potential collaborators identified (not yet public) — adjacent to the Binz 2026 /
+ICLR 2026 "RL to explain human decisions" line of work._
