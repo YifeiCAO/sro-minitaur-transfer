@@ -39,6 +39,7 @@ tasks:
   # ---- speed -------------------------------------------------------------
   choice_reaction_time:           {domain: speed, ceiling: true, in_distribution: false}  # signal is pure RT
   psychological_refractory_period_two_choices: {domain: speed, ceiling: true, in_distribution: false}
+  shape_matching:                 {domain: speed, ceiling: true, in_distribution: false}  # speeded matching; signal in RT
 
   # ---- reinforcement learning -------------------------------------------
   probabilistic_selection:        {domain: reinforcement_learning, ceiling: false, in_distribution: true}
