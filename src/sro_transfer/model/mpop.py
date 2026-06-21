@@ -230,12 +230,21 @@ def train_mpop(cfg: dict, sessions: dict[str, str], out_dir: str | Path):
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
         logging_steps=10,
-        save_strategy="epoch",
+        save_strategy="steps",
+        save_steps=ft.get("save_steps", 100),     # checkpoint to Drive ~every 45 min
+        save_total_limit=2,                        # keep disk small
         report_to=[],
     )
     collator = DataCollatorForSeq2Seq(tok, padding=True, label_pad_token_id=-100)
     trainer = Trainer(model=model, args=args, train_dataset=ds, data_collator=collator)
-    trainer.train()
+    # resume from the latest checkpoint if one exists (survives a Colab disconnect)
+    import os
+    have_ckpt = os.path.isdir(out_dir) and any(
+        p.startswith("checkpoint-") for p in os.listdir(out_dir)
+    )
+    if have_ckpt:
+        print(f"resuming from a checkpoint in {out_dir}")
+    trainer.train(resume_from_checkpoint=have_ckpt)
     trainer.save_model(str(out_dir))
     tok.save_pretrained(str(out_dir))
     return out_dir
