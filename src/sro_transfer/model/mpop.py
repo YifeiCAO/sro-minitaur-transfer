@@ -150,6 +150,39 @@ def load_for_incontext_finetune(cfg: dict, mpop_dir: str | Path):
     return model, tok
 
 
+def load_raw_model(cfg: dict):
+    """Raw base behavioral FM (NO SRO adapter), 4-bit, frozen — for training-free
+    surprise reps / scale checks (e.g. Centaur-70B). Handles a merged base_model
+    OR an adapter-on-base_llm (set base_is_adapter + base_llm, e.g. gated Llama-70B).
+    """
+    import torch
+    from peft import PeftModel
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
+    m = cfg["model"]
+    src = m["base_llm"] if m.get("base_is_adapter") else m["base_model"]
+    bf16_ok = torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8
+    compute_dtype = torch.bfloat16 if bf16_ok else torch.float16
+    quant = None
+    if m.get("load_in_4bit"):
+        quant = BitsAndBytesConfig(
+            load_in_4bit=True, bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=compute_dtype, bnb_4bit_use_double_quant=True,
+        )
+    tok = AutoTokenizer.from_pretrained(m.get("base_model") or src)
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    model = AutoModelForCausalLM.from_pretrained(
+        src, quantization_config=quant, torch_dtype=compute_dtype, device_map="auto",
+    )
+    if m.get("base_is_adapter") and m.get("base_model"):
+        model = PeftModel.from_pretrained(model, m["base_model"]).merge_and_unload()
+    model.eval()
+    for p in model.parameters():
+        p.requires_grad_(False)
+    return model, tok
+
+
 def build_dataset(sessions: dict[str, str], tokenizer, max_len: int):
     """HF Dataset of response-masked sessions (one row per (subject, task))."""
     from datasets import Dataset
