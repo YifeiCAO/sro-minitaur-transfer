@@ -109,8 +109,8 @@
 <section><div class="wrap">
   <div class="abstract">
     <h2 class="zh">摘要</h2><h2 class="en">Abstract</h2>
-    <p class="zh">个体差异通常用手工设计的总结量(折扣率、d′)来刻画。我们改为考察:一个在原始人类行为上训练的基础模型(<b>Minitaur</b> = Llama-3.1-8B + Psych-101),其内部是否携带可<b>跨任务迁移</b>的个体认知特征。基于 Self-Regulation Ontology(522 名被试,11 个认知任务),我们在拼接的 <code>[任务A + 任务B]</code> 序列上微调模型,并以<b>置乱对照</b>检验个体特异性:用一个人<b>自己</b>的前序任务作条件,是否比用<b>陌生人</b>的更能预测他的下一个任务。我们在<b>多个域、跨不同任务</b>上观察到显著的个体特异迁移(延迟折扣的三个不同范式 id 0.20–0.37;冲突域 DF↔近探针 0.16/0.17, p~1e-6);唯一确凿的域内零是两个差异很大的风险任务(CCT↔IST)。一项对抗审计确认结果不含伪影;在称之为"迁移"之前,我们仍需排除基于选择偏好(base-rate)的解释。</p>
-    <p class="en">Individual differences are usually captured with hand-crafted summary scores (a discount rate, a d′). We instead ask whether a foundation model trained on raw human behavior (<b>Minitaur</b> = Llama-3.1-8B + Psych-101) carries an individual's cognitive signature in a way that <b>transfers across tasks</b>. On the Self-Regulation Ontology (522 subjects, 11 cognitive tasks), we fine-tune the model on concatenated <code>[task-A + task-B]</code> sequences and test person-specificity with a <b>shuffled control</b>: does conditioning on a person's <b>own</b> prior task predict their next task better than a <b>stranger's</b>? We observe significant person-specific transfer <b>across multiple domains and across genuinely different tasks</b> (three discounting paradigms, id 0.20–0.37; conflict DF↔recent-probes 0.16/0.17, p~1e-6); the only clear within-domain null is between two very different risk tasks (CCT↔IST). An adversarial audit confirms the result is artifact-free; a base-rate explanation remains to be excluded before calling it "transfer".</p>
+    <p class="zh">个体差异通常用手工设计的总结量(折扣率、d′)来刻画。我们改为考察:一个在原始人类行为上训练的基础模型(<b>Minitaur</b> = Llama-3.1-8B + Psych-101),其内部是否携带可<b>跨任务迁移</b>的个体认知特征。基于 Self-Regulation Ontology(522 名被试,11 个认知任务),我们在拼接的 <code>[任务A + 任务B]</code> 序列上微调模型,并以<b>置乱对照</b>检验个体特异性:用一个人<b>自己</b>的前序任务作条件,是否比用<b>陌生人</b>的更能预测他的下一个任务。个体特异迁移**在 9 对中的 7 对扛过了"选择率匹配"对照**(即超出选择偏好的真信号),且是**域特异的**(域内 id 约 0.20,跨域 ≈ 随机 0.10)。最干净的格子是均衡任务(CCT 冷↔热 −0.02, p=5e-5;冲突 DF/DPX↔近探针);饱和的折扣任务里残差很小。换言之:**可迁移的个体过程信号真实存在、但很薄,且似乎集中在"选择不饱和"的任务上**(提示性)。</p>
+    <p class="en">Individual differences are usually captured with hand-crafted summary scores (a discount rate, a d′). We instead ask whether a foundation model trained on raw human behavior (<b>Minitaur</b> = Llama-3.1-8B + Psych-101) carries an individual's cognitive signature in a way that <b>transfers across tasks</b>. On the Self-Regulation Ontology (522 subjects, 11 cognitive tasks), we fine-tune the model on concatenated <code>[task-A + task-B]</code> sequences and test person-specificity with a <b>shuffled control</b>: does conditioning on a person's <b>own</b> prior task predict their next task better than a <b>stranger's</b>? Person-specific transfer <b>survives a marginal-matched base-rate control in 7 of 9 tested pairs</b> (i.e. real signal beyond choice rate) and is <b>domain-specific</b> (within-domain id ≈ 0.20, across-domain ≈ chance 0.10). The cleanest cells are choice-balanced tasks (CCT cold↔hot −0.02, p=5e-5; conflict DF/DPX↔recent); in saturated discounting tasks the residual is tiny. In short: a transferable individual <i>process</i> signal is real but thin, and appears concentrated in non-saturated tasks (suggestive).</p>
   </div>
 </div></section>
 
@@ -310,6 +310,66 @@
   </table>
   <p class="small mut zh" style="margin-top:14px">关键:迁移在<b>三个不同折扣范式</b>之间、在<b>定向遗忘↔近探针</b>这两个不同任务之间都显著成立——<b>不是"同任务才行"</b>。唯一确凿的零是两个差异极大的风险任务(CCT↔IST)。</p>
   <p class="small mut en" style="margin-top:14px">Key: transfer holds across <b>three different discounting paradigms</b> and between the two different conflict tasks (<b>DF↔recent-probes</b>) — it is <b>not</b> "same-task only". The only clear null is between two very different risk tasks (CCT↔IST).</p>
+
+  <h3 class="zh" style="margin-top:30px">超出 base-rate,而且域特异</h3><h3 class="en" style="margin-top:30px">Beyond base-rate, and domain-specific</h3>
+  <p class="zh">控制选择率后(对照"选择率最接近的陌生人",置换检验),<b>9 对中 7 对仍显著</b> —— 存在超出选择偏好的真信号。迁移还是<b>域特异</b>的:跨域识别 ≈ 随机(0.11 vs 域内 ~0.20)。残差最大的是<b>选择均衡</b>的任务(CCT、冲突),饱和的折扣里几乎没有。下图把"幸存残差"对"目标任务饱和度"画出来。</p>
+  <p class="en">After controlling for choice rate (vs the <i>marginal-matched</i> stranger, permutation test), <b>7 of 9 pairs remain significant</b> — real signal beyond response bias. Transfer is also <b>domain-specific</b>: across-domain identification ≈ chance (0.11 vs within ~0.20). The largest residuals are in <b>choice-balanced</b> tasks (CCT, conflict); saturated discounting shows almost none. The figure plots surviving residual against target-task saturation.</p>
+
+  <figure style="margin:18px 0 0">
+    <svg viewBox="0 0 720 430" xmlns="http://www.w3.org/2000/svg" role="img" style="width:100%;height:auto">
+    <title>幸存残差 vs 目标任务饱和度 / surviving residual vs target saturation</title>
+    <desc>散点图:选择越均衡的目标任务,控制 base-rate 后幸存的个体残差越大;整体负相关,但主要由 CCT 驱动。</desc>
+    <style>
+      .f2 text{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;fill:#1a1a1a}
+      .f2 .ax{stroke:#9aa3ad;stroke-width:1}
+      .f2 .gl{stroke:#ececec;stroke-width:1}
+      .f2 .tl{stroke:#9aa3ad;stroke-width:1.5;stroke-dasharray:5 4}
+      .f2 .tk{font-size:11px;fill:#5b5f66}
+      .f2 .ti{font-size:12.5px;fill:#5b5f66}
+      .f2 .lg{font-size:12px;fill:#1a1a1a}
+    </style>
+    <g class="f2">
+      <!-- gridlines + y ticks (0,0.01,0.02) -->
+      <line class="gl" x1="80" y1="114" x2="660" y2="114"/>
+      <line class="gl" x1="80" y1="237" x2="660" y2="237"/>
+      <line class="ax" x1="80" y1="40" x2="80" y2="360"/>
+      <line class="ax" x1="80" y1="360" x2="660" y2="360"/>
+      <text class="tk" x="74" y="364" text-anchor="end">0</text>
+      <text class="tk" x="74" y="241" text-anchor="end">0.01</text>
+      <text class="tk" x="74" y="118" text-anchor="end">0.02</text>
+      <!-- x ticks -->
+      <text class="tk" x="119" y="378" text-anchor="middle">0.2</text>
+      <text class="tk" x="273" y="378" text-anchor="middle">0.4</text>
+      <text class="tk" x="428" y="378" text-anchor="middle">0.6</text>
+      <text class="tk" x="583" y="378" text-anchor="middle">0.8</text>
+      <!-- trend -->
+      <line class="tl" x1="110" y1="105" x2="645" y2="350"/>
+      <!-- points: risk=teal, conflict=indigo, discounting=orange -->
+      <circle cx="126" cy="99"  r="6" fill="#2a9d8f"/>
+      <circle cx="188" cy="63"  r="6" fill="#2a9d8f"/>
+      <circle cx="366" cy="333" r="6" fill="#5b6cc4"/>
+      <circle cx="382" cy="318" r="6" fill="#5b6cc4"/>
+      <circle cx="392" cy="339" r="6" fill="#5b6cc4"/>
+      <circle cx="482" cy="334" r="6" fill="#c8762f"/>
+      <circle cx="492" cy="347" r="6" fill="#c8762f"/>
+      <circle cx="474" cy="356" r="6" fill="#c8762f"/>
+      <circle cx="629" cy="347" r="6" fill="#c8762f"/>
+      <!-- CCT labels -->
+      <text class="tk" x="200" y="58">CCT 冷↔热</text>
+      <!-- axis titles -->
+      <text class="ti" x="370" y="402" text-anchor="middle">目标任务选择饱和度（modal fraction）→ 越右越饱和</text>
+      <text class="ti" x="22" y="200" text-anchor="middle" transform="rotate(-90 22 200)">幸存残差 |ΔNLL|</text>
+      <!-- legend -->
+      <circle cx="470" cy="56" r="5" fill="#2a9d8f"/><text class="lg" x="480" y="60">风险 CCT</text>
+      <circle cx="470" cy="76" r="5" fill="#5b6cc4"/><text class="lg" x="480" y="80">冲突/记忆</text>
+      <circle cx="470" cy="96" r="5" fill="#c8762f"/><text class="lg" x="480" y="100">折扣</text>
+    </g>
+    </svg>
+    <figcaption style="color:#878b92;font-size:13px;font-style:italic;margin-top:12px">
+      <span class="zh">图 2. 控制选择率后幸存的个体残差 vs 目标任务的选择饱和度。均衡任务(左)残差更大。整体 r=−0.86 (p=.003),但主要由 CCT(同任务两版)驱动;仅看真正不同的任务时趋势一致但欠功效(n=7, p=.17)。提示性,尚未坐实。</span>
+      <span class="en">Figure 2. Surviving person-specific residual vs target-task choice saturation. Balanced targets (left) show larger residuals. r=−0.86 (p=.003) overall, but driven by the Columbia Card Task (same-task variants); among genuinely different tasks the trend is consistent but underpowered (n=7, p=.17). Suggestive, not established.</span>
+    </figcaption>
+  </figure>
 </div></section>
 
 <section><div class="wrap">
@@ -349,8 +409,8 @@
 
 <section><div class="wrap">
   <h2><span class="n">6</span><span class="zh">进度</span><span class="en">Status</span></h2>
-  <p class="small zh"><b>已完成:</b>任务编码 · M_pop(宏 0.75)· 域内上下文迁移矩阵(折扣/风险/冲突 3 域显著)· 对抗审计与加固脚本。&nbsp;<b>进行中:</b>基准率对照(决定性)· 跨域矩阵 · 重测天花板 · 修复 DPX 编码。</p>
-  <p class="small en"><b>Done:</b> task encoding · M_pop (macro 0.75) · within-domain in-context transfer matrix (significant in 3 domains) · adversarial audit + hardening. &nbsp;<b>Running:</b> base-rate control (decisive) · across-domain matrix · retest ceiling · fix DPX encoding.</p>
+  <p class="small zh"><b>已完成:</b>任务编码 · M_pop(宏 0.75)· 域内迁移矩阵 · <b>跨域矩阵(域内≫跨域)</b> · <b>base-rate 对照(9 对中 7 对幸存)</b> · 对抗审计与加固。&nbsp;<b>进行中 / 下一步:</b>criterion 探针(surprise→问卷)· 加更多均衡任务以坐实饱和度假设 · 修复 DPX 编码。</p>
+  <p class="small en"><b>Done:</b> task encoding · M_pop (macro 0.75) · within-domain matrix · <b>across-domain matrix (within≫across)</b> · <b>base-rate control (7/9 survive)</b> · adversarial audit + hardening. &nbsp;<b>Next:</b> criterion probe (surprise→survey) · more balanced tasks to test the saturation hypothesis · fix DPX encoding.</p>
   <p class="small mut zh">两种结局皆可发表:阳性表明逐试次序列携带可跨任务迁移的个体结构;零结果则是"选择层面个体差异不跨任务迁移"的干净模型证据。</p>
   <p class="small mut en">Both outcomes are publishable: a positive result shows trial-level sequences carry transferable individual structure; a null gives clean model-based evidence that choice-level individual differences do not transfer across tasks.</p>
 </div></section>
