@@ -57,7 +57,7 @@ def main():
     elif args.pairs == "all":
         pairs = [(a, b) for a in tasks for b in tasks if a != b]
     else:
-        pairs = [tuple(p.split(">")) for p in args.pairs.split(",")]
+        pairs = [tuple(p.replace(":", ">").split(">")) for p in args.pairs.split(",")]  # ':' avoids shell redirect
 
     out = Path(rdir) / "incontext_matrix"
     out.mkdir(parents=True, exist_ok=True)

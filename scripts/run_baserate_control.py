@@ -67,7 +67,7 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     report = {}
     for pair in args.pairs.split(","):
-        a, b = pair.split(">")
+        a, b = pair.replace(":", ">").split(">")   # ':' avoids shell redirection
         A = load_sessions(cfg["paths"]["nl_dir"], a, "complete")
         B = load_sessions(cfg["paths"]["nl_dir"], b, "complete")
         held = [w for w in heldout if w in A and w in B]
