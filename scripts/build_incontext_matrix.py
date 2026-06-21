@@ -80,7 +80,7 @@ def main():
         held = [w for w in heldout if w in sess[a] and w in sess[b]]
         if len(held) < 20:
             continue
-        ranks, reals, floors, shufs = [], [], [], []
+        ranks, reals, floors, shufs, raw = [], [], [], [], []
         for p in held:
             floor = incontext_response_nll(model, tok, sess[b][p], None, args.max_seq_len)
             others = [q for q in held if q != p]
@@ -92,6 +92,11 @@ def main():
             ranks.append(order.index(p) + 1)
             reals.append(real); floors.append(floor)
             shufs.append(float(np.mean([nlls[q] for q in distr])))
+            # raw candidate NLLs -> enables offline permutation / dz / bootstrap / K-id
+            raw.append({"wid": p, "floor": floor, "real": real,
+                        "distractors": {q: nlls[q] for q in distr}})
+        rawdir = out / "raw"; rawdir.mkdir(parents=True, exist_ok=True)
+        (rawdir / f"{a}__{b}.json").write_text(json.dumps(raw))
         ranks = np.array(ranks); reals = np.array(reals); floors = np.array(floors); shufs = np.array(shufs)
         top1 = float((ranks == 1).mean())
         T.loc[a, b] = top1

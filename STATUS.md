@@ -35,8 +35,27 @@ cross-task **identification** (rank-based, dodges NLL dilution); chance = 1/K.
 | **surprise-rep diagnostic** | DF→recent_probes, training-free | **top1 0.18 vs 0.10 chance (~2.8 SD, p≈0.002)** — real, modest |
 | **surprise-rep matrix (11 tasks)** | per-person surprise profiles, all pairs | **within 0.153 > across 0.115 > chance 0.10** — right structure, modest, cell-level noisy |
 | **in-context zero-shot** | put A's transcript before B, no training | **null** — real ≈ floor ≈ shuffled. Minitaur ignores cross-task context zero-shot |
-| **in-context fine-tune (multi-pair)** | train M_pop on [A+B] seqs; eval on heldout DF→recent_probes | ✅ **real < shuffled −0.0059 (p=6e-6), real < floor (p=2e-4), 73% of people** — clean person-specific cross-task transfer. Verified no subject-ID leakage in the text. Small per-token magnitude (choice-only), but rock-solid direction. Zero-shot was null → fine-tuning taught the model to use cross-task context |
+| **in-context fine-tune (multi-pair)** | train M_pop on [A+B] seqs; eval real vs shuffled-A on heldout | ✅ **two pairs, both clean person-specific:** DF→recent_probes real<shuffled −0.0059, 73%; **kirby→discount −0.0118, 85%** (magnitude tracks 0c: discounting strongest). No subject-ID leakage; 0% split contamination (re-verified). Zero-shot was null → fine-tuning taught cross-task conditioning. _Headline p demoted to permutation null (t-test was variance-inflated); claim scoped to "within-domain own-session NLL advantage" pending base-rate control + within>across (see §3.5)_ |
 | **retest ceiling** | same-task time1→time2 identification (upper bound) | **running / pending** — needed to interpret the magnitude |
+
+### 3.5 Adversarial audit (6-agent, code+data re-verified)
+
+**No bug. Result real as a mechanism.** Independently confirmed: NLL/masking/causal-shift
+correct & symmetric (floor/real/shuffled differ only by prepended A); split clean (0
+heldout in train); shuffled control fair; no stimulus/ID shortcut; p self-consistent (dz≈1.1).
+
+**Two things to fix before saying "transfer":**
+1. **Biggest risk — base-rate vs process.** A,B share response vocab → own-A could just
+   leak the person's marginal choice rate. **DF→recent_probes largely escapes** (balanced
+   target, 0% degenerate) → lead with it. **kirby→discount exposed** (23% near-degenerate)
+   → run the **marginal-matched control** (`run_baserate_control.py`): real<matched ⇒ beyond base rate.
+2. **Statistic — t-test inflated** (variance-deflated, non-independent shuffled arm). Switch to
+   **sign-flip / exchangeability permutation** + dz + bootstrap CI + Wilcoxon (`stats.py`,
+   `analyze_incontext_stats.py`, all offline). Report n_shuffle=1, ≥3 seeds, BH-FDR over pairs.
+
+Strongest defensible phrasing today: _"within a cognitive domain, conditioning a choice-only
+FM on a person's own prior session lowers their next-task choice NLL more than a stranger's."_
+Items #1 (base-rate) + within>across upgrade this to "transfer."
 
 ## 4. Key insight (why soft-prompt failed, why surprise works)
 
