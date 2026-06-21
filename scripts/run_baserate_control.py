@@ -68,6 +68,10 @@ def main():
     report = {}
     for pair in args.pairs.split(","):
         a, b = pair.replace(":", ">").split(">")   # ':' avoids shell redirection
+        fp = out / f"{a}__{b}.json"
+        if fp.exists():                            # resume: skip pairs already done
+            report[pair] = json.loads(fp.read_text())["report"]
+            print(f"  {pair}: already done, skipping"); continue
         A = load_sessions(cfg["paths"]["nl_dir"], a, "complete")
         B = load_sessions(cfg["paths"]["nl_dir"], b, "complete")
         held = [w for w in heldout if w in A and w in B]
