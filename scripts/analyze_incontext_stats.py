@@ -25,6 +25,45 @@ from sro_transfer.stats import exchangeability_perm, paired_report
 from sro_transfer.utils import load_config, load_tasks
 
 
+def summarize_pair_stats(csv, domain):
+    """Fallback when raw NLLs are absent (matrix run with an older version):
+    read pair_stats.csv, flag degenerate cells, report clean within/across means.
+    id_top1 is correct for non-degenerate pairs (ties only occur in degenerate
+    cells), but permutation p / dz / bootstrap need raw -> re-run the matrix."""
+    import pandas as pd
+    df = pd.read_csv(csv)
+
+    def is_degen(r):
+        return (r["id_top1"] >= 0.99 or not np.isfinite(r["p_real_vs_shuffled"])
+                or abs(r["real_minus_shuffled"]) < 1e-6)
+
+    rows = [{
+        "source": r["source"], "target": r["target"],
+        "within": domain.get(r["source"]) == domain.get(r["target"]),
+        "id_top1": float(r["id_top1"]), "mdiff": float(r["real_minus_shuffled"]),
+        "p_ttest": float(r["p_real_vs_shuffled"]) if np.isfinite(r["p_real_vs_shuffled"]) else float("nan"),
+        "degenerate": bool(is_degen(r)),
+    } for _, r in df.iterrows()]
+    rows.sort(key=lambda x: (x["degenerate"], -x["id_top1"]))
+
+    print(f"[fallback: raw NLLs absent -> reading {csv.name}]\n")
+    print(f"{'pair':<50} {'win':<4} {'id_top1':>8} {'mdiff':>9} {'p(t-test)':>11} {'flag':>6}")
+    for x in rows:
+        print(f"{x['source']+'>'+x['target']:<50} {'Y' if x['within'] else 'n':<4} "
+              f"{x['id_top1']:>8.3f} {x['mdiff']:>+9.4f} {x['p_ttest']:>11.1e} "
+              f"{'DEGEN' if x['degenerate'] else '':>6}")
+    valid = [x for x in rows if not x["degenerate"]]
+    within = [x["id_top1"] for x in valid if x["within"]]
+    across = [x["id_top1"] for x in valid if not x["within"]]
+    print(f"\nvalid {len(valid)}/{len(rows)} pairs (dropped {len(rows)-len(valid)} degenerate). chance id_top1 = 0.10")
+    if within:
+        print(f"within id_top1 mean = {np.mean(within):.3f}  (n={len(within)})")
+    if across:
+        print(f"across id_top1 mean = {np.mean(across):.3f}  (n={len(across)})")
+    print("\nNOTE: p shown is the INFLATED t-test. For the permutation p / dz / bootstrap")
+    print("bundle, re-run build_incontext_matrix.py (now saves raw NLLs), then this script.")
+
+
 def bh_fdr(pvals):
     p = np.asarray(pvals, float); n = len(p)
     order = np.argsort(p); ranked = p[order]
@@ -48,7 +87,10 @@ def main():
 
     files = sorted(rawdir.glob("*.json"))
     if not files:
-        print(f"no raw files in {rawdir} — run build_incontext_matrix.py first"); return
+        csv = rawdir.parent / "pair_stats.csv"
+        if csv.exists():
+            summarize_pair_stats(csv, domain); return
+        print(f"no raw files in {rawdir} and no pair_stats.csv — run build_incontext_matrix.py first"); return
 
     results = []
     for fp in files:
