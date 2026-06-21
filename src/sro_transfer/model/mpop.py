@@ -39,6 +39,16 @@ def load_base_model(cfg: dict):
         BitsAndBytesConfig,
     )
 
+    # optional: fused cross-entropy (Liger) avoids materializing the [B,L,V] fp32
+    # logits tensor -> the seq-4096 memory bottleneck -> much larger batch fits.
+    # No-op if liger-kernel isn't installed.
+    try:
+        from liger_kernel.transformers import apply_liger_kernel_to_llama
+        apply_liger_kernel_to_llama()
+        print("[liger] fused kernels enabled (raise --batch-size to fill VRAM)")
+    except Exception as e:
+        print(f"[liger] not active ({type(e).__name__}); standard path (keep batch modest)")
+
     m = cfg["model"]
     src = m["base_llm"] if m.get("base_is_adapter") else m["base_model"]
     tok = AutoTokenizer.from_pretrained(src)
