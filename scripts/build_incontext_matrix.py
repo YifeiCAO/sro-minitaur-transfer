@@ -59,10 +59,24 @@ def main():
     else:
         pairs = [tuple(p.split(">")) for p in args.pairs.split(",")]
 
+    out = Path(rdir) / "incontext_matrix"
+    out.mkdir(parents=True, exist_ok=True)
     T = pd.DataFrame(index=tasks, columns=tasks, dtype=float)
-    nll_rows = []
+    # resume: skip pairs already in pair_stats.csv (survives disconnect)
+    done = set()
+    stats_fp = out / "pair_stats.csv"
+    if stats_fp.exists():
+        prev = pd.read_csv(stats_fp)
+        for _, r in prev.iterrows():
+            done.add((r["source"], r["target"])); T.loc[r["source"], r["target"]] = r["id_top1"]
+        nll_rows = prev.to_dict("records")
+        print(f"resuming: {len(done)} pairs already done")
+    else:
+        nll_rows = []
     rng = np.random.RandomState(seed)
     for a, b in pairs:
+        if (a, b) in done:
+            continue
         held = [w for w in heldout if w in sess[a] and w in sess[b]]
         if len(held) < 20:
             continue
@@ -93,11 +107,9 @@ def main():
         r = nll_rows[-1]
         print(f"  {a:>22} -> {b:<22}  id_top1={top1:.3f} (chance {1/args.K:.2f})  "
               f"real-shuf={r['real_minus_shuffled']:+.4f} (p={r['p_real_vs_shuffled']:.1e})")
-
-    out = Path(rdir) / "incontext_matrix"
-    out.mkdir(parents=True, exist_ok=True)
-    T.to_csv(out / "identification_matrix.csv")
-    pd.DataFrame(nll_rows).to_csv(out / "pair_stats.csv", index=False)
+        # save after EVERY pair (resilient to disconnect)
+        T.to_csv(out / "identification_matrix.csv")
+        pd.DataFrame(nll_rows).to_csv(out / "pair_stats.csv", index=False)
     within = [r["id_top1"] for r in nll_rows if domain[r["source"]] == domain[r["target"]]]
     across = [r["id_top1"] for r in nll_rows if domain[r["source"]] != domain[r["target"]]]
     summ = {"within_id_top1": float(np.mean(within)) if within else None,
