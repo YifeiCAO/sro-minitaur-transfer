@@ -63,7 +63,8 @@ def main():
         rep_one = paired_report(real, shuf_one, seed=cfg["split"]["seed"])
         results.append({
             "source": a, "target": b, "within": domain.get(a) == domain.get(b),
-            "n": ex["n"], "id_top1": ex["id_top1"], "chance_top1": ex["chance_top1"],
+            "n": ex["n"], "n_degenerate": ex.get("n_degenerate", 0),
+            "id_top1": ex["id_top1"], "chance_top1": ex["chance_top1"],
             "mean_rank": ex["mean_rank"], "id_top1_perm_p": ex["top1_perm_p"],
             "mean_diff": rep_mean["mean_diff"], "cohen_dz": rep_mean["cohen_dz"],
             "perm_p": rep_mean["perm_p"], "boot_ci95": rep_mean["boot_ci95"],
@@ -75,24 +76,27 @@ def main():
     for r, q in zip(results, qs):
         r["perm_q_BH"] = float(q)
 
-    results.sort(key=lambda r: r["perm_p"])
+    results.sort(key=lambda r: (np.isnan(r["perm_p"]), r["perm_p"]))
     print(f"{'pair':<48} {'win':<4} {'id_top1':>8} {'rank':>6} {'mdiff':>8} {'dz':>6} "
-          f"{'perm_p':>9} {'q_BH':>8}")
+          f"{'perm_p':>9} {'q_BH':>8} {'degen':>6}")
     for r in results:
         print(f"{r['source']+'>'+r['target']:<48} {'Y' if r['within'] else 'n':<4} "
               f"{r['id_top1']:>8.3f} {r['mean_rank']:>6.2f} {r['mean_diff']:>+8.4f} "
-              f"{r['cohen_dz']:>6.2f} {r['perm_p']:>9.1e} {r['perm_q_BH']:>8.1e}")
+              f"{r['cohen_dz']:>6.2f} {r['perm_p']:>9.1e} {r['perm_q_BH']:>8.1e} {r['n_degenerate']:>6d}")
 
-    within = [r for r in results if r["within"]]
-    across = [r for r in results if not r["within"]]
-    n_sig = sum(1 for r in results if r["perm_q_BH"] < 0.05)
+    # exclude degenerate (context-truncated) pairs from the within/across contrast
+    valid = [r for r in results if np.isfinite(r["id_top1"]) and r["n"] >= 20]
+    within = [r for r in valid if r["within"]]
+    across = [r for r in valid if not r["within"]]
+    n_sig = sum(1 for r in valid if r["perm_q_BH"] < 0.05)
     summ = {
-        "n_pairs": len(results), "n_sig_BH_q<.05": n_sig,
+        "n_pairs": len(results), "n_pairs_valid": len(valid), "n_sig_BH_q<.05": n_sig,
         "within_id_top1_mean": float(np.mean([r["id_top1"] for r in within])) if within else None,
         "across_id_top1_mean": float(np.mean([r["id_top1"] for r in across])) if across else None,
-        "chance_top1": results[0]["chance_top1"] if results else None,
+        "chance_top1": valid[0]["chance_top1"] if valid else None,
         "within_mean_diff": float(np.mean([r["mean_diff"] for r in within])) if within else None,
         "across_mean_diff": float(np.mean([r["mean_diff"] for r in across])) if across else None,
+        "dropped_degenerate_pairs": [f"{r['source']}>{r['target']}" for r in results if r not in valid],
     }
     out = rawdir.parent / "incontext_stats.json"
     out.write_text(json.dumps({"summary": summ, "pairs": results}, indent=2))
