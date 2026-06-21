@@ -195,15 +195,18 @@ def load_raw_model(cfg: dict):
 
 def build_dataset(sessions: dict[str, str], tokenizer, max_len: int):
     """HF Dataset of response-masked sessions (one row per (subject, task))."""
+    import os
     from datasets import Dataset
 
+    os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")  # safe under multiprocessing
     rows = [{"text": t} for t in sessions.values()]
     ds = Dataset.from_list(rows)
 
     def _map(ex):
         return build_labels(ex["text"], tokenizer, max_len)
 
-    return ds.map(_map, remove_columns=["text"])
+    nproc = min(8, max(1, (os.cpu_count() or 2)))
+    return ds.map(_map, remove_columns=["text"], num_proc=nproc)
 
 
 def train_mpop(cfg: dict, sessions: dict[str, str], out_dir: str | Path):

@@ -39,16 +39,17 @@ def build_labels(text: str, tokenizer, max_len: int = 4096):
         add_special_tokens=True,
     )
     spans = response_char_spans(text)
-    offsets = enc["offset_mapping"]
-    labels = [-100] * len(enc["input_ids"])
-    for i, (s, e) in enumerate(offsets):
-        if s == e:  # special tokens have empty offsets
-            continue
-        # a token is a target if its character span overlaps any response span
-        for rs, re_ in spans:
-            if s < re_ and e > rs:
-                labels[i] = enc["input_ids"][i]
-                break
+    # O(n) char mask of response positions (was O(tokens x spans) -> very slow on
+    # long sessions with many trials). A token is a target if any of its chars is
+    # inside a response span.
+    resp = bytearray(len(text) + 1)
+    for rs, re_ in spans:
+        resp[rs:re_] = b"\x01" * (re_ - rs)
+    ids = enc["input_ids"]
+    labels = [-100] * len(ids)
+    for i, (s, e) in enumerate(enc["offset_mapping"]):
+        if s != e and resp.find(b"\x01", s, e) != -1:
+            labels[i] = ids[i]
     enc.pop("offset_mapping")
     enc["labels"] = labels
     return enc
