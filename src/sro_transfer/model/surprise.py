@@ -110,7 +110,7 @@ def build_or_load_profiles(model, tok, sessions: dict[str, str], cache_fp, max_l
 
     cache_fp = Path(cache_fp)
     if cache_fp.exists():
-        return torch.load(cache_fp)
+        return torch.load(cache_fp, weights_only=False)   # our own dict-of-numpy cache
     cache_fp.parent.mkdir(parents=True, exist_ok=True)
     if batch_tokens and batch_tokens > 0:
         items = list(sessions.items())

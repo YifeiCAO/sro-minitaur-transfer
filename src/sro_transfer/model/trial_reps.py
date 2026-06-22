@@ -49,7 +49,7 @@ def build_or_load_reps(model, tokenizer, sessions: dict[str, str],
 
     cache_fp = Path(cache_fp)
     if cache_fp.exists():
-        return torch.load(cache_fp)
+        return torch.load(cache_fp, weights_only=False)
     cache_fp.parent.mkdir(parents=True, exist_ok=True)
 
     reps: dict = {}

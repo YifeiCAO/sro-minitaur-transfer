@@ -60,7 +60,7 @@ def save_heads(tm, path):
 
 def load_heads(tm, path):
     import torch
-    sd = torch.load(path, map_location=tm.mpop.device)
+    sd = torch.load(path, map_location=tm.mpop.device, weights_only=False)
     tm.encoder.load_state_dict(sd["encoder"])
     tm.injector.load_state_dict(sd["injector"])
     tm.encoder.eval(); tm.injector.eval()
