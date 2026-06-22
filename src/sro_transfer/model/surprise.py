@@ -10,16 +10,20 @@ A person's profile is the set of (surprise, entropy) over their trials.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import numpy as np
 
 from .masking import build_labels
 
+_RT_TOK = re.compile(r"^rt(\d+|_na)$")   # response content of an RT-bin token
 
-def _profile_from_logits(sl, tl):
-    """(surprise, entropy) per response from shifted logits ``sl`` [L-1,V] and
-    shifted labels ``tl`` [L-1]. Contiguous response positions = one response."""
+
+def _profile_from_logits(sl, tl, tok):
+    """(surprise, entropy, is_rt) per response from shifted logits ``sl`` [L-1,V]
+    and shifted labels ``tl`` [L-1]. Contiguous response positions = one response;
+    is_rt=1 if the response decodes to an ``rt<bin>`` token (vs a choice)."""
     import torch
     import torch.nn.functional as F
 
@@ -32,12 +36,15 @@ def _profile_from_logits(sl, tl):
     surp = (-logp[torch.arange(len(pos), device=logp.device), toks]).tolist()
     ent = (-(logp.exp() * logp).sum(-1)).tolist()
     pos_l = pos.tolist()
+    tok_l = toks.tolist()
     rows, i = [], 0
     while i < len(pos_l):
         j = i
         while j + 1 < len(pos_l) and pos_l[j + 1] == pos_l[j] + 1:
             j += 1
-        rows.append([float(np.mean(surp[i:j + 1])), float(np.mean(ent[i:j + 1]))])
+        content = tok.decode(tok_l[i:j + 1]).strip().replace(" ", "")
+        is_rt = 1.0 if _RT_TOK.match(content) else 0.0
+        rows.append([float(np.mean(surp[i:j + 1])), float(np.mean(ent[i:j + 1])), is_rt])
         i = j + 1
     return np.array(rows, dtype=np.float32)
 
@@ -52,7 +59,7 @@ def extract_surprise_profile(model, tok, text: str, max_len: int):
     lab = torch.tensor(e["labels"], device=model.device)
     with torch.no_grad():
         logits = model(input_ids=ids, attention_mask=att).logits[0]
-    return _profile_from_logits(logits[:-1], lab[1:])
+    return _profile_from_logits(logits[:-1], lab[1:], tok)
 
 
 def extract_surprise_profiles_batch(model, tok, items, max_len, batch_tokens=8192):
@@ -92,7 +99,7 @@ def extract_surprise_profiles_batch(model, tok, items, max_len, batch_tokens=819
             logits = model(input_ids=ids, attention_mask=att).logits   # [B, L, V]
         for b, (w, *_ ) in enumerate(batch):
             tl = labs[b, 1:].to(model.device)
-            p = _profile_from_logits(logits[b, :-1], tl)
+            p = _profile_from_logits(logits[b, :-1], tl, tok)
             if p is not None:
                 out[w] = p
         del logits
@@ -128,13 +135,21 @@ def build_or_load_profiles(model, tok, sessions: dict[str, str], cache_fp, max_l
     return out
 
 
-def summarize_profile(profile: np.ndarray) -> np.ndarray:
+def summarize_profile(profile: np.ndarray, which: str = "both") -> np.ndarray:
     """Fixed-length, task-agnostic person vector from a (surprise, entropy) set.
 
     Captures the distribution of the person's deviations, plus how their surprise
     differs on hard (high-entropy) vs easy trials -- deviation beyond difficulty.
+
+    ``which`` filters responses by type when the profile has an is_rt column
+    (3rd col): "both" (all), "rt" (RT-bin tokens only), "choice" (choices only).
     """
-    s, e = profile[:, 0], profile[:, 1]
+    p = np.asarray(profile, dtype=float)
+    if which != "both" and p.shape[1] >= 3:
+        p = p[p[:, 2] == (1.0 if which == "rt" else 0.0)]
+    if len(p) == 0:
+        return np.zeros(17, dtype=np.float32)
+    s, e = p[:, 0], p[:, 1]
 
     def st(x):
         return [float(x.mean()), float(x.std())] + [float(q) for q in np.quantile(x, [.1, .25, .5, .75, .9])]

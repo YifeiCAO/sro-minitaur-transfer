@@ -55,6 +55,8 @@ def main():
     ap.add_argument("--batch-tokens", type=int, default=8192,
                     help="B*L tokens per batched forward; raise to fill VRAM (e.g. 32768 for 70B on 96GB). 0 = one-at-a-time")
     ap.add_argument("--tag", default="", help="suffix for cache/output (keeps 8B vs 70B separate)")
+    ap.add_argument("--rep", choices=["both", "rt", "choice"], default="both",
+                    help="which response tokens to use for the person rep (needs RT-tagged profiles)")
     args = ap.parse_args()
     from sklearn.linear_model import Ridge
 
@@ -83,7 +85,7 @@ def main():
         sess = load_sessions(cfg["paths"]["nl_dir"], t, "complete")
         prof = build_or_load_profiles(model, tok, sess, Path(rdir) / f"surprise{tagsuf}" / f"{t}.pt",
                                       max_len, batch_tokens=args.batch_tokens)
-        summ[t] = {w: summarize_profile(p) for w, p in prof.items()}
+        summ[t] = {w: summarize_profile(p, which=args.rep) for w, p in prof.items()}
         retest = list(load_sessions(cfg["paths"]["nl_dir"], t, "retest"))
         splits[t] = make_splits(list(sess), retest, cfg["split"]["heldout_frac"], seed)
         print(f"  profiled {t}: {len(summ[t])} subjects")
@@ -118,17 +120,18 @@ def main():
               if a != b and not pd.isna(T.loc[a, b]) and domain[a] != domain[b]]
 
     out = Path(rdir)
-    T.to_csv(out / f"surprise_matrix{tagsuf}.csv")
-    hubs.sort_values("hub", ascending=False).to_csv(out / f"surprise_hubs{tagsuf}.csv")
-    print(f"\n=== T_surprise[A,B] identification top1  tag='{args.tag}'  (chance =", chance, ") ===")
+    repsuf = f"{tagsuf}_{args.rep}"                     # outputs separated by rep; cache shared by tag
+    T.to_csv(out / f"surprise_matrix{repsuf}.csv")
+    hubs.sort_values("hub", ascending=False).to_csv(out / f"surprise_hubs{repsuf}.csv")
+    print(f"\n=== T_surprise[A,B] identification top1  tag='{args.tag}' rep='{args.rep}'  (chance =", chance, ") ===")
     print(T.round(3).to_string())
     print("\nhubs:\n", hubs.sort_values("hub", ascending=False).round(3).to_string())
-    print(f"\nwithin-domain mean top1 = {np.nanmean(within):.3f}  (n={len(within)})")
-    print(f"across-domain mean top1 = {np.nanmean(across):.3f}  (n={len(across)})")
+    print(f"\nrep={args.rep}  within-domain mean top1 = {np.nanmean(within):.3f}  (n={len(within)})")
+    print(f"rep={args.rep}  across-domain mean top1 = {np.nanmean(across):.3f}  (n={len(across)})")
     print(f"chance = {chance:.3f}")
     json.dump({"within": float(np.nanmean(within)), "across": float(np.nanmean(across)),
-               "chance": chance, "tag": args.tag},
-              open(out / f"surprise_matrix_summary{tagsuf}.json", "w"), indent=2)
+               "chance": chance, "tag": args.tag, "rep": args.rep},
+              open(out / f"surprise_matrix_summary{repsuf}.json", "w"), indent=2)
 
 
 if __name__ == "__main__":
