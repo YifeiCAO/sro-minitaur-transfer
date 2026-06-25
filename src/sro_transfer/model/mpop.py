@@ -18,13 +18,16 @@ from pathlib import Path
 from .masking import build_labels
 
 
-def load_base_model(cfg: dict):
+def load_base_model(cfg: dict, use_liger: bool = True):
     """Load the behavioral FM (Centaur 8B) + tokenizer, 4-bit for Colab.
 
     Default: ``base_model`` is the merged Centaur model, loaded directly. If
     ``base_is_adapter`` is true, ``base_model`` is instead a LoRA adapter applied
     on ``base_llm`` and merged. Either way a *fresh* LoRA is then attached for
     the SRO population fine-tune.
+
+    ``use_liger=False`` skips the fused-CE patch -- needed when something hooks
+    the lm_head input (e.g. the RT head reads the last hidden state).
     """
     import torch
     from peft import (
@@ -41,13 +44,13 @@ def load_base_model(cfg: dict):
 
     # optional: fused cross-entropy (Liger) avoids materializing the [B,L,V] fp32
     # logits tensor -> the seq-4096 memory bottleneck -> much larger batch fits.
-    # No-op if liger-kernel isn't installed.
-    try:
-        from liger_kernel.transformers import apply_liger_kernel_to_llama
-        apply_liger_kernel_to_llama()
-        print("[liger] fused kernels enabled (raise --batch-size to fill VRAM)")
-    except Exception as e:
-        print(f"[liger] not active ({type(e).__name__}); standard path (keep batch modest)")
+    if use_liger:
+        try:
+            from liger_kernel.transformers import apply_liger_kernel_to_llama
+            apply_liger_kernel_to_llama()
+            print("[liger] fused kernels enabled (raise --batch-size to fill VRAM)")
+        except Exception as e:
+            print(f"[liger] not active ({type(e).__name__}); standard path (keep batch modest)")
 
     m = cfg["model"]
     src = m["base_llm"] if m.get("base_is_adapter") else m["base_model"]

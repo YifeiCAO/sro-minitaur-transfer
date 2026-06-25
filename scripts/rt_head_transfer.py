@@ -81,6 +81,39 @@ def extract_task(model, tok, sess, max_len):
     return np.asarray(H, np.float32), np.asarray(rt), np.asarray(owner)
 
 
+def residuals_via_head(model, tok, head, sess, max_len):
+    """Per person: standardised residuals (logRT - mu)/sigma from the TRAINED head."""
+    import torch
+    prof = {}
+    for w, (text, rtv) in sess.items():
+        if not rtv:
+            continue
+        e = build_labels(text, tok, max_len)
+        ids = torch.tensor([e["input_ids"]], device=model.device)
+        with torch.no_grad():
+            hs = model(input_ids=ids, output_hidden_states=True).hidden_states[-1][0]
+        lab = e["labels"]; groups, i, L = [], 0, len(lab)
+        while i < L:
+            if lab[i] != -100:
+                j = i
+                while j + 1 < L and lab[j + 1] != -100:
+                    j += 1
+                groups.append(i); i = j + 1
+            else:
+                i += 1
+        m = len(groups)
+        if m == 0:
+            continue
+        tgt = rtv[-m:]
+        with torch.no_grad():
+            mu, ls = head(hs[groups].float())
+        mu = mu.cpu().numpy(); sig = ls.exp().cpu().numpy() + 1e-6
+        z = [(tgt[gi] - mu[gi]) / sig[gi] for gi in range(m) if tgt[gi] == tgt[gi]]
+        if len(z) >= 3:
+            prof[w] = np.asarray(z)
+    return prof
+
+
 def _identify(pred, true_vecs, ids, K, seed):
     rng = np.random.RandomState(seed)
     T = np.stack([true_vecs[w] for w in ids]); T = T / (np.linalg.norm(T, axis=1, keepdims=True) + 1e-8)
@@ -98,6 +131,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="configs/default.yaml")
     ap.add_argument("--mpop", default="/content/drive/MyDrive/sro_minitaur/mpop_rt")
+    ap.add_argument("--trained", default=None,
+                    help="dir of a trained RT head (adapter + rt_head.pt); else frozen-Ridge probe")
     ap.add_argument("--nl-dir", default="/content/drive/MyDrive/sro_minitaur/output_nl_rtval")
     ap.add_argument("--subset", default="all")
     ap.add_argument("--K", type=int, default=10)
@@ -113,7 +148,14 @@ def main():
     tax = load_tasks()
     tasks = sorted(tax["tasks"]) if args.subset == "all" else tax["subsets"][args.subset]
     domain = {t: tax["tasks"][t]["domain"] for t in tax["tasks"]}
-    model, tok = get_model(cfg, args.mpop)
+    head = None
+    if args.trained:
+        from sro_transfer.model.rt_head import load_rt_model
+        model, tok, head = load_rt_model(cfg, args.trained)
+        print(f"using TRAINED RT head from {args.trained}")
+    else:
+        model, tok = get_model(cfg, args.mpop)
+        print("using frozen-Ridge PROBE (no trained head)")
 
     reps, splits = {}, {}
     for t in tasks:
@@ -121,7 +163,13 @@ def main():
         if len(sess) < 60:
             continue
         split = make_splits(list(sess), [], cfg["split"]["heldout_frac"], seed)
-        H, rt, owner = extract_task(model, tok, sess, args.max_seq_len)
+        if head is not None:                            # trained head: residual = (logRT-mu)/sigma
+            prof_z = residuals_via_head(model, tok, head, sess, args.max_seq_len)
+            reps[t] = {w: _residual_rep(z) for w, z in prof_z.items()}
+            splits[t] = split
+            print(f"  {t:<28} profiles={len(reps[t])}")
+            continue
+        H, rt, owner = extract_task(model, tok, sess, args.max_seq_len)   # probe: fit a Ridge
         if len(rt) < 200:
             continue
         trm = np.array([o in set(split.train) for o in owner])
