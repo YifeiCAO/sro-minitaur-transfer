@@ -18,13 +18,14 @@ from .masking import build_labels
 
 
 class RTHead(nn.Module):
+    """Predicts mu = E[log-RT] (point estimate). MSE loss -> no sigma collapse."""
+
     def __init__(self, hidden: int):
         super().__init__()
-        self.net = nn.Sequential(nn.Linear(hidden, 256), nn.GELU(), nn.Linear(256, 2))
+        self.net = nn.Sequential(nn.Linear(hidden, 256), nn.GELU(), nn.Linear(256, 1))
 
-    def forward(self, h):                                   # h [N,H] -> mu, log-sigma
-        p = self.net(h)
-        return p[..., 0], p[..., 1].clamp(-4.0, 4.0)
+    def forward(self, h):                                   # h [N,H] -> mu [N]
+        return self.net(h).squeeze(-1)
 
 
 class RTModel(nn.Module):
@@ -46,15 +47,15 @@ class RTModel(nn.Module):
         with torch.autocast("cuda", dtype=torch.bfloat16):
             out = self.base(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
         loss = out.loss
-        rt_nll = torch.tensor(0.0, device=loss.device)
+        rt_mse = torch.tensor(0.0, device=loss.device)
         if rt_target is not None and self._h is not None:
             m = ~torch.isnan(rt_target)
             if bool(m.any()):
-                mu, ls = self.head(self._h[m].float())      # fp32 head
+                mu = self.head(self._h[m].float())          # fp32 head, point estimate
                 y = rt_target[m].float()
-                rt_nll = (0.5 * ((y - mu) / ls.exp()) ** 2 + ls).mean()
-                loss = loss + self.lam * rt_nll
-        return {"loss": loss, "rt_nll": rt_nll.detach()}
+                rt_mse = ((mu - y) ** 2).mean()             # MSE on log-RT: stable, >= 0
+                loss = loss + self.lam * rt_mse
+        return {"loss": loss, "rt_mse": rt_mse.detach()}
 
 
 def build_rt_rows(sessions_rtval: dict, tok, max_len: int):
@@ -142,7 +143,7 @@ def train_rt_head(cfg, sessions_rtval, out_dir, lam=1.0, epochs=1, batch_size=4,
                 torch.nn.utils.clip_grad_norm_(params, 1.0)
                 opt.step(); opt.zero_grad(); step += 1
                 if step % 10 == 0:
-                    print(f"  ep{ep} step{step}  loss {float(out['loss']):.3f}  rt_nll {float(out['rt_nll']):.3f}")
+                    print(f"  ep{ep} step{step}  loss {out['loss'].item():.3f}  rt_mse {out['rt_mse'].item():.3f}")
                 if save_steps and step % save_steps == 0:
                     _save(model, tok, out_dir); print(f"  [saved @ step {step}]")
                 if max_steps and step >= max_steps:

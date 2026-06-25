@@ -86,7 +86,7 @@ def residuals_via_head(model, tok, head, sess, max_len):
     Also returns flat (mu, y, owner) arrays for a heldout RT-prediction R^2 check
     (is the head TRIAL-CONDITIONAL, or just predicting the marginal mean?)."""
     import torch
-    prof, MU, Y, OWN = {}, [], [], []
+    raw, MU, Y, OWN = {}, [], [], []
     for w, (text, rtv) in sess.items():
         if not rtv:
             continue
@@ -108,15 +108,17 @@ def residuals_via_head(model, tok, head, sess, max_len):
             continue
         tgt = rtv[-m:]
         with torch.no_grad():
-            mu, ls = head(hs[groups].float())
-        mu = mu.cpu().numpy(); sig = ls.exp().cpu().numpy() + 1e-6
-        z = []
+            mu = head(hs[groups].float()).cpu().numpy()      # point estimate of log-RT
+        r = []
         for gi in range(m):
             if tgt[gi] == tgt[gi]:
-                z.append((tgt[gi] - mu[gi]) / sig[gi])
+                r.append(tgt[gi] - mu[gi])                   # residual = logRT - predicted
                 MU.append(mu[gi]); Y.append(tgt[gi]); OWN.append(w)
-        if len(z) >= 3:
-            prof[w] = np.asarray(z)
+        if len(r) >= 3:
+            raw[w] = np.asarray(r)
+    allr = np.concatenate(list(raw.values())) if raw else np.array([1.0])
+    sd = allr.std() + 1e-6                                    # standardise by the task residual sd
+    prof = {w: r / sd for w, r in raw.items()}
     return prof, np.asarray(MU), np.asarray(Y), np.asarray(OWN)
 
 
