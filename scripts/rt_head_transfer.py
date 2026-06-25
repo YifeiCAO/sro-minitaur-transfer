@@ -82,9 +82,11 @@ def extract_task(model, tok, sess, max_len):
 
 
 def residuals_via_head(model, tok, head, sess, max_len):
-    """Per person: standardised residuals (logRT - mu)/sigma from the TRAINED head."""
+    """Per person: standardised residuals (logRT - mu)/sigma from the TRAINED head.
+    Also returns flat (mu, y, owner) arrays for a heldout RT-prediction R^2 check
+    (is the head TRIAL-CONDITIONAL, or just predicting the marginal mean?)."""
     import torch
-    prof = {}
+    prof, MU, Y, OWN = {}, [], [], []
     for w, (text, rtv) in sess.items():
         if not rtv:
             continue
@@ -108,10 +110,14 @@ def residuals_via_head(model, tok, head, sess, max_len):
         with torch.no_grad():
             mu, ls = head(hs[groups].float())
         mu = mu.cpu().numpy(); sig = ls.exp().cpu().numpy() + 1e-6
-        z = [(tgt[gi] - mu[gi]) / sig[gi] for gi in range(m) if tgt[gi] == tgt[gi]]
+        z = []
+        for gi in range(m):
+            if tgt[gi] == tgt[gi]:
+                z.append((tgt[gi] - mu[gi]) / sig[gi])
+                MU.append(mu[gi]); Y.append(tgt[gi]); OWN.append(w)
         if len(z) >= 3:
             prof[w] = np.asarray(z)
-    return prof
+    return prof, np.asarray(MU), np.asarray(Y), np.asarray(OWN)
 
 
 def _identify(pred, true_vecs, ids, K, seed):
@@ -164,10 +170,12 @@ def main():
             continue
         split = make_splits(list(sess), [], cfg["split"]["heldout_frac"], seed)
         if head is not None:                            # trained head: residual = (logRT-mu)/sigma
-            prof_z = residuals_via_head(model, tok, head, sess, args.max_seq_len)
+            prof_z, MU, Y, OWN = residuals_via_head(model, tok, head, sess, args.max_seq_len)
             reps[t] = {w: _residual_rep(z) for w, z in prof_z.items()}
             splits[t] = split
-            print(f"  {t:<28} profiles={len(reps[t])}")
+            hem = np.array([o in set(split.heldout) for o in OWN]) if len(OWN) else np.array([], bool)
+            r2 = (np.corrcoef(MU[hem], Y[hem])[0, 1] ** 2) if hem.sum() > 2 else float("nan")
+            print(f"  {t:<28} profiles={len(reps[t])}  heldout RT R^2={r2:.3f}")
             continue
         H, rt, owner = extract_task(model, tok, sess, args.max_seq_len)   # probe: fit a Ridge
         if len(rt) < 200:
