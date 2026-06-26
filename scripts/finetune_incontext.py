@@ -51,12 +51,15 @@ def main():
     ap.add_argument("--lr", type=float, default=1e-4)
     ap.add_argument("--batch-size", type=int, default=1, help="per-device batch; raise on A100 (4) to use the GPU")
     ap.add_argument("--grad-accum", type=int, default=8, help="lower it when raising batch to keep effective batch ~constant")
+    ap.add_argument("--nl-dir", default=None, help="override paths.nl_dir (e.g. output_nl_rt for RT in-context)")
     args = ap.parse_args()
     import torch
     from datasets import Dataset
     from transformers import DataCollatorForSeq2Seq, Trainer, TrainingArguments
 
     cfg = load_config(args.config)
+    if args.nl_dir:
+        cfg["paths"]["nl_dir"] = args.nl_dir
     tax = load_tasks()
     tasks = tax["subsets"][args.subset]
     domain = {t: tax["tasks"][t]["domain"] for t in tasks}

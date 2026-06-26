@@ -34,9 +34,12 @@ def main():
     ap.add_argument("--target", required=True)
     ap.add_argument("--max-seq-len", type=int, default=8192)
     ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--nl-dir", default=None, help="override paths.nl_dir (e.g. output_nl_rt)")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
+    if args.nl_dir:
+        cfg["paths"]["nl_dir"] = args.nl_dir
     seed = cfg["split"]["seed"]
     n_shuf = cfg["eval"]["n_shuffle_controls"]
     model, tok = get_model(cfg, args.mpop)

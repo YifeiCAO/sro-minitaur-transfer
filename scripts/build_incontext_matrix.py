@@ -38,9 +38,12 @@ def main():
     ap.add_argument("--pairs", default="within", help="'within' | 'all' | 'A>B,C>D' explicit list")
     ap.add_argument("--K", type=int, default=10)
     ap.add_argument("--max-seq-len", type=int, default=6144)
+    ap.add_argument("--nl-dir", default=None, help="override paths.nl_dir (e.g. output_nl_rt)")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
+    if args.nl_dir:
+        cfg["paths"]["nl_dir"] = args.nl_dir
     seed, rdir = cfg["split"]["seed"], cfg["paths"]["results"]
     tax = load_tasks()
     tasks = sorted(tax["tasks"]) if args.subset == "all" else tax["subsets"][args.subset]
