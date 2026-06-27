@@ -35,6 +35,8 @@ def main():
     ap.add_argument("--max-seq-len", type=int, default=8192)
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--nl-dir", default=None, help="override paths.nl_dir (e.g. output_nl_rt)")
+    ap.add_argument("--rep", choices=["both", "choice", "rt"], default="both",
+                    help="which B-response tokens to score")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
@@ -56,11 +58,11 @@ def main():
 
     rows = []
     for i, p in enumerate(held, 1):
-        floor = incontext_response_nll(model, tok, B[p], None, args.max_seq_len)
-        real = incontext_response_nll(model, tok, B[p], A[p], args.max_seq_len)
+        floor = incontext_response_nll(model, tok, B[p], None, args.max_seq_len, rep=args.rep)
+        real = incontext_response_nll(model, tok, B[p], A[p], args.max_seq_len, rep=args.rep)
         others = [w for w in held if w != p]
         shuf = np.mean([
-            incontext_response_nll(model, tok, B[p], A[q], args.max_seq_len)
+            incontext_response_nll(model, tok, B[p], A[q], args.max_seq_len, rep=args.rep)
             for q in rng.choice(others, size=min(n_shuf, len(others)), replace=False)
         ]) if others else np.nan
         rows.append({"wid": p, "floor": floor, "real": real, "shuffled": float(shuf)})

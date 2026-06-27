@@ -39,6 +39,8 @@ def main():
     ap.add_argument("--K", type=int, default=10)
     ap.add_argument("--max-seq-len", type=int, default=6144)
     ap.add_argument("--nl-dir", default=None, help="override paths.nl_dir (e.g. output_nl_rt)")
+    ap.add_argument("--rep", choices=["both", "choice", "rt"], default="both",
+                    help="which B-response tokens to score (needs RT-rendered data)")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
@@ -62,7 +64,7 @@ def main():
     else:
         pairs = [tuple(p.replace(":", ">").split(">")) for p in args.pairs.split(",")]  # ':' avoids shell redirect
 
-    out = Path(rdir) / "incontext_matrix"
+    out = Path(rdir) / (f"incontext_matrix_{args.rep}" if args.rep != "both" else "incontext_matrix")
     out.mkdir(parents=True, exist_ok=True)
     T = pd.DataFrame(index=tasks, columns=tasks, dtype=float)
     # resume: skip pairs already in pair_stats.csv (survives disconnect)
@@ -85,11 +87,11 @@ def main():
             continue
         ranks, reals, floors, shufs, raw = [], [], [], [], []
         for p in held:
-            floor = incontext_response_nll(model, tok, sess[b][p], None, args.max_seq_len)
+            floor = incontext_response_nll(model, tok, sess[b][p], None, args.max_seq_len, rep=args.rep)
             others = [q for q in held if q != p]
             distr = list(rng.choice(others, size=min(args.K - 1, len(others)), replace=False))
             cands = [p] + distr
-            nlls = {q: incontext_response_nll(model, tok, sess[b][p], sess[a][q], args.max_seq_len) for q in cands}
+            nlls = {q: incontext_response_nll(model, tok, sess[b][p], sess[a][q], args.max_seq_len, rep=args.rep) for q in cands}
             real = nlls[p]
             order = sorted(cands, key=lambda q: nlls[q])
             ranks.append(order.index(p) + 1)
