@@ -27,7 +27,7 @@ from sro_transfer.utils import load_config, load_tasks
 
 def build_example(a_text, b_text, tok, max_len):
     a_ids = tok(a_text, add_special_tokens=True)["input_ids"]
-    b_ids, b_flags = _b_label_mask(b_text, tok)
+    b_ids, b_flags, _ = _b_label_mask(b_text, tok)
     input_ids = a_ids + b_ids
     labels = [-100] * len(a_ids) + [t if f else -100 for t, f in zip(b_ids, b_flags)]
     if len(input_ids) > max_len:                       # keep tail (B intact)
